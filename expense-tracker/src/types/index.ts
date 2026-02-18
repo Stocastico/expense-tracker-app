@@ -1,5 +1,7 @@
 export type TransactionType = 'expense' | 'income';
 
+export type AccountId = 'personal' | 'family';
+
 export type RecurringFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly';
 
 export interface Category {
@@ -28,6 +30,8 @@ export interface Transaction {
   recurringParentId?: string;  // links generated instances to template
   // Receipt
   receiptImageUrl?: string;
+  // Account
+  accountId: AccountId;
   // Meta
   createdAt: string;
   updatedAt: string;
@@ -48,6 +52,7 @@ export interface AppSettings {
   darkMode: boolean;
   categories: Category[];
   startOfMonth: number;    // day 1-28
+  defaultAccount: AccountId;
 }
 
 export interface AppState {

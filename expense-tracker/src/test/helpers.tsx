@@ -24,6 +24,7 @@ export function makeTx(overrides: Partial<Transaction> = {}): Transaction {
     date: '2024-01-15',
     tags: [],
     isRecurring: false,
+    accountId: 'personal',
     createdAt: '2024-01-15T10:00:00Z',
     updatedAt: '2024-01-15T10:00:00Z',
     ...overrides,

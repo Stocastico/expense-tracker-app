@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { Camera, Upload, Loader2, RefreshCw, Tag, X } from 'lucide-react';
-import type { Transaction, TransactionType, RecurringFrequency } from '../../types';
+import type { Transaction, TransactionType, RecurringFrequency, AccountId } from '../../types';
 import { useAppStore } from '../../store/StoreContext';
+import { ACCOUNTS } from '../../store/defaults';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
@@ -24,7 +25,7 @@ const RECURRING_OPTIONS: { value: RecurringFrequency; label: string }[] = [
 ];
 
 export function TransactionForm({ transaction, onClose }: TransactionFormProps) {
-  const { settings, addTransaction, updateTransaction } = useAppStore();
+  const { settings, currentAccount, addTransaction, updateTransaction } = useAppStore();
   const { categories, currency } = settings;
   const isEdit = !!transaction;
 
@@ -46,6 +47,7 @@ export function TransactionForm({ transaction, onClose }: TransactionFormProps) 
   const [tags, setTags] = useState<string[]>(transaction?.tags ?? []);
   const [tagInput, setTagInput] = useState('');
   const [notes, setNotes] = useState(transaction?.notes ?? '');
+  const [accountId, setAccountId] = useState<AccountId>(transaction?.accountId ?? currentAccount);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -139,6 +141,7 @@ export function TransactionForm({ transaction, onClose }: TransactionFormProps) 
       isRecurring,
       recurringFrequency: isRecurring ? recurringFreq : undefined,
       recurringEndDate: isRecurring && recurringEnd ? recurringEnd : undefined,
+      accountId,
     };
 
     if (isEdit && transaction) {
@@ -334,6 +337,27 @@ export function TransactionForm({ transaction, onClose }: TransactionFormProps) 
             </div>
           </div>
         )}
+      </div>
+
+      {/* Account */}
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Account</label>
+        <div className="flex rounded-xl bg-gray-100 dark:bg-gray-700 p-1 gap-1">
+          {ACCOUNTS.map(acc => (
+            <button
+              key={acc.id}
+              type="button"
+              onClick={() => setAccountId(acc.id)}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
+                accountId === acc.id
+                  ? 'bg-indigo-500 text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-800'
+              }`}
+            >
+              {acc.icon} {acc.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Submit */}

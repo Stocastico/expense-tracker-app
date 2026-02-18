@@ -1,17 +1,22 @@
 import { useState, useMemo } from 'react';
-import { Search, Filter, ChevronDown } from 'lucide-react';
+import { Search, Filter, ChevronDown, FileText } from 'lucide-react';
 import { useAppStore } from '../store/StoreContext';
 import { Card } from '../components/ui/Card';
 import { TransactionItem } from '../components/transactions/TransactionItem';
 import { EmptyState } from '../components/ui/EmptyState';
+import { PdfImportModal } from '../components/transactions/PdfImportModal';
 import { monthKey, formatDate } from '../utils/dates';
 
 type SortKey = 'date' | 'amount';
 type SortDir = 'asc' | 'desc';
 
 export function TransactionsPage() {
-  const { transactions, settings } = useAppStore();
+  const { transactions, settings, currentAccount } = useAppStore();
   const { categories } = settings;
+  const accountTransactions = useMemo(
+    () => transactions.filter(t => !t.accountId || t.accountId === currentAccount),
+    [transactions, currentAccount],
+  );
 
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'income'>('all');
@@ -20,14 +25,15 @@ export function TransactionsPage() {
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [showFilters, setShowFilters] = useState(false);
+  const [showPdfImport, setShowPdfImport] = useState(false);
 
   const months = useMemo(() => {
-    const keys = new Set(transactions.map(t => monthKey(t.date)));
+    const keys = new Set(accountTransactions.map(t => monthKey(t.date)));
     return [...keys].sort().reverse();
-  }, [transactions]);
+  }, [accountTransactions]);
 
   const filtered = useMemo(() => {
-    let result = transactions;
+    let result = accountTransactions;
 
     if (search) {
       const q = search.toLowerCase();
@@ -51,7 +57,7 @@ export function TransactionsPage() {
     });
 
     return result;
-  }, [transactions, search, filterType, filterCategory, filterMonth, sortKey, sortDir]);
+  }, [accountTransactions, search, filterType, filterCategory, filterMonth, sortKey, sortDir]);
 
   // Group by date
   const groups = useMemo(() => {
@@ -70,9 +76,18 @@ export function TransactionsPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Transactions</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{filtered.length} of {transactions.length} shown</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Transactions</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{filtered.length} of {accountTransactions.length} shown</p>
+        </div>
+        <button
+          onClick={() => setShowPdfImport(true)}
+          className="flex items-center gap-1.5 text-sm text-indigo-500 hover:text-indigo-600 font-medium"
+        >
+          <FileText size={16} />
+          Import PDF
+        </button>
       </div>
 
       {/* Search */}
@@ -154,6 +169,8 @@ export function TransactionsPage() {
           </div>
         </Card>
       )}
+
+      <PdfImportModal open={showPdfImport} onClose={() => setShowPdfImport(false)} />
 
       {/* Transaction groups */}
       {groups.length === 0 ? (

@@ -54,7 +54,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
   darkMode: false,
   categories: DEFAULT_CATEGORIES,
   startOfMonth: 1,
+  defaultAccount: 'personal',
 };
+
+export const ACCOUNTS = [
+  { id: 'personal' as const, label: 'Personal', icon: '👤' },
+  { id: 'family'   as const, label: 'Family',   icon: '👨‍👩‍👧' },
+];
 
 export const CURRENCIES = [
   { code: 'USD', symbol: '$', name: 'US Dollar' },

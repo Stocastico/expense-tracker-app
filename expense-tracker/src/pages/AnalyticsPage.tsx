@@ -31,17 +31,22 @@ function CustomTooltip({ active, payload, label, currency }: any) {
 }
 
 export function AnalyticsPage() {
-  const { transactions, settings } = useAppStore();
+  const { transactions, settings, currentAccount } = useAppStore();
   const { currency, categories } = settings;
   const [monthCount, setMonthCount] = useState(6);
 
+  const accountTransactions = useMemo(
+    () => transactions.filter(t => !t.accountId || t.accountId === currentAccount),
+    [transactions, currentAccount],
+  );
+
   const months = useMemo(() => lastNMonths(monthCount), [monthCount]);
-  const monthStats = useMemo(() => getMonthStats(transactions, months), [transactions, months]);
+  const monthStats = useMemo(() => getMonthStats(accountTransactions, months), [accountTransactions, months]);
 
   const currentMonthKey = monthKey(new Date().toISOString());
   const currentMonthTxs = useMemo(
-    () => transactions.filter(t => monthKey(t.date) === currentMonthKey && t.type === 'expense'),
-    [transactions, currentMonthKey]
+    () => accountTransactions.filter(t => monthKey(t.date) === currentMonthKey && t.type === 'expense'),
+    [accountTransactions, currentMonthKey]
   );
 
   const categoryStats = useMemo(

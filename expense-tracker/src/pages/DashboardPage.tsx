@@ -27,20 +27,25 @@ function StatCard({ label, value, sub, color, icon }: {
 }
 
 export function DashboardPage({ onNavigate }: DashboardPageProps) {
-  const { transactions, settings, budgets } = useAppStore();
+  const { transactions, settings, budgets, currentAccount } = useAppStore();
   const { currency, categories } = settings;
+
+  const accountTransactions = useMemo(
+    () => transactions.filter(t => !t.accountId || t.accountId === currentAccount),
+    [transactions, currentAccount],
+  );
 
   const now = new Date();
   const monthStart = startOfMonth(now);
   const monthEnd = endOfMonth(now);
 
   const thisMonthTxs = useMemo(
-    () => transactions.filter(t => {
+    () => accountTransactions.filter(t => {
       try {
         return isWithinInterval(parseISO(t.date), { start: monthStart, end: monthEnd });
       } catch { return false; }
     }),
-    [transactions, monthStart, monthEnd]
+    [accountTransactions, monthStart, monthEnd]
   );
 
   const totalExpenses = useMemo(
@@ -75,8 +80,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
   }, [thisMonthTxs, categories]);
 
   const recentTxs = useMemo(
-    () => [...transactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5),
-    [transactions]
+    () => [...accountTransactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5),
+    [accountTransactions]
   );
 
   return (

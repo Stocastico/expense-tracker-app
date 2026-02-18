@@ -141,6 +141,58 @@ describe('SettingsPage', () => {
     const importBtn = screen.getByText(/^Import$/i);
     expect(() => fireEvent.click(importBtn)).not.toThrow();
   });
+
+  it('selects emoji in add category form', () => {
+    renderWithStore(<SettingsPage />);
+    fireEvent.click(screen.getByText(/^Add$/i));
+    // Click on an emoji other than the default 📦
+    const coffeeBtn = screen.getByText('☕');
+    fireEvent.click(coffeeBtn);
+    // The emoji should now be selected (has ring class)
+    expect(coffeeBtn.className).toContain('ring');
+  });
+
+  it('selects color in add category form', () => {
+    renderWithStore(<SettingsPage />);
+    fireEvent.click(screen.getByText(/^Add$/i));
+    // Find color swatches (buttons without text)
+    const colorBtns = document.querySelectorAll('button.w-7.h-7.rounded-full');
+    if (colorBtns.length > 0) {
+      fireEvent.click(colorBtns[0]);
+      expect(colorBtns[0].className).toContain('ring');
+    }
+  });
+
+  it('successfully adds a category', () => {
+    renderWithStore(<SettingsPage />);
+    fireEvent.click(screen.getByText(/^Add$/i));
+    const nameInput = screen.getByPlaceholderText(/e.g. Sports/i);
+    fireEvent.change(nameInput, { target: { value: 'Hiking' } });
+    fireEvent.click(screen.getByText(/Add Category/i));
+    // Modal should close after successful add — modal title is "New Category"
+    // The new category "Hiking" should appear in the list
+    expect(screen.getByText('Hiking')).toBeInTheDocument();
+  });
+
+  it('changes type in add category form', () => {
+    renderWithStore(<SettingsPage />);
+    fireEvent.click(screen.getByText(/^Add$/i));
+    // The modal has a type selector; getAllByRole picks all comboboxes
+    const allSelects = screen.getAllByRole('combobox');
+    const typeSelect = allSelects[allSelects.length - 1];
+    fireEvent.change(typeSelect, { target: { value: 'income' } });
+    expect((typeSelect as HTMLSelectElement).value).toBe('income');
+  });
+
+  it('clears error when category name is typed after validation', () => {
+    renderWithStore(<SettingsPage />);
+    fireEvent.click(screen.getByText(/^Add$/i));
+    fireEvent.click(screen.getByText(/Add Category/i));
+    expect(screen.getByText(/Name is required/i)).toBeInTheDocument();
+    const nameInput = screen.getByPlaceholderText(/e.g. Sports/i);
+    fireEvent.change(nameInput, { target: { value: 'Sports' } });
+    expect(screen.queryByText(/Name is required/i)).not.toBeInTheDocument();
+  });
 });
 
 describe('SettingsPage – custom categories', () => {

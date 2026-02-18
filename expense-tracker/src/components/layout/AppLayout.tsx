@@ -2,6 +2,8 @@ import { type ReactNode, useState } from 'react';
 import { LayoutDashboard, List, BarChart2, Target, Settings, Plus } from 'lucide-react';
 import { TransactionForm } from '../transactions/TransactionForm';
 import { Modal } from '../ui/Modal';
+import { useAppStore } from '../../store/StoreContext';
+import { ACCOUNTS } from '../../store/defaults';
 
 type Page = 'dashboard' | 'transactions' | 'analytics' | 'budgets' | 'settings';
 
@@ -21,23 +23,49 @@ const navItems: { page: Page; icon: typeof LayoutDashboard; label: string }[] = 
 
 export function AppLayout({ currentPage, onNavigate, children }: AppLayoutProps) {
   const [addOpen, setAddOpen] = useState(false);
+  const { currentAccount, setCurrentAccount, serverConnected } = useAppStore();
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Top header — mobile only title */}
+      {/* Top header */}
       <header className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 safe-top">
         <div className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
             <span className="text-2xl">💰</span>
             <span className="font-bold text-gray-900 dark:text-white text-lg">Expense Tracker</span>
+            {serverConnected && (
+              <span className="text-xs bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded-full font-medium">
+                ● sync
+              </span>
+            )}
           </div>
-          <button
-            onClick={() => setAddOpen(true)}
-            className="flex items-center gap-1.5 bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors shadow-sm"
-          >
-            <Plus size={16} />
-            Add
-          </button>
+
+          <div className="flex items-center gap-2">
+            {/* Account switcher */}
+            <div className="flex rounded-lg bg-gray-100 dark:bg-gray-700 p-0.5 text-xs">
+              {ACCOUNTS.map(acc => (
+                <button
+                  key={acc.id}
+                  onClick={() => setCurrentAccount(acc.id)}
+                  className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+                    currentAccount === acc.id
+                      ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}
+                >
+                  {acc.icon} {acc.label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setAddOpen(true)}
+              className="flex items-center gap-1.5 bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors shadow-sm"
+            >
+              <Plus size={16} />
+              Add
+            </button>
+          </div>
         </div>
       </header>
 

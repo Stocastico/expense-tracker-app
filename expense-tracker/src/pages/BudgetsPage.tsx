@@ -60,16 +60,21 @@ function BudgetForm({ onClose }: { onClose: () => void }) {
 }
 
 export function BudgetsPage() {
-  const { budgets, transactions, settings, deleteBudget } = useAppStore();
+  const { budgets, transactions, settings, deleteBudget, currentAccount } = useAppStore();
   const { currency, categories } = settings;
   const [addOpen, setAddOpen] = useState(false);
 
   const currentMonth = monthKey(new Date().toISOString());
 
+  const accountTransactions = useMemo(
+    () => transactions.filter(t => !t.accountId || t.accountId === currentAccount),
+    [transactions, currentAccount],
+  );
+
   const budgetData = useMemo(() => {
     return budgets.map(b => {
       const cat = categories.find(c => c.id === b.categoryId);
-      const monthTxs = transactions.filter(t =>
+      const monthTxs = accountTransactions.filter(t =>
         t.type === 'expense' &&
         t.categoryId === b.categoryId &&
         (b.period === 'monthly' ? monthKey(t.date) === currentMonth : t.date.startsWith(currentMonth.substring(0, 4)))
@@ -79,7 +84,7 @@ export function BudgetsPage() {
       const percentage = b.amount > 0 ? (spent / b.amount) * 100 : 0;
       return { budget: b, cat, spent, remaining, percentage };
     });
-  }, [budgets, transactions, categories, currentMonth]);
+  }, [budgets, accountTransactions, categories, currentMonth]);
 
   const totalBudgeted = budgetData.reduce((s, d) => s + d.budget.amount, 0);
   const totalSpent = budgetData.reduce((s, d) => s + d.spent, 0);
