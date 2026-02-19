@@ -19,7 +19,7 @@ describe('App integration', () => {
 
   it('shows dashboard by default', () => {
     render(<App />);
-    expect(screen.getByText(/financial snapshot/i)).toBeInTheDocument();
+    expect(screen.getByText(/Net balance/i)).toBeInTheDocument();
   });
 
   it('navigates to Transactions page', () => {
@@ -53,13 +53,13 @@ describe('App integration', () => {
 
   it('opens Add Transaction modal from header button', () => {
     render(<App />);
-    fireEvent.click(screen.getByText('Add'));
+    fireEvent.click(screen.getByRole('button', { name: /add transaction/i }));
     expect(screen.getByText(/Add Transaction/i)).toBeInTheDocument();
   });
 
   it('closes Add Transaction modal on Cancel', () => {
     render(<App />);
-    fireEvent.click(screen.getByText('Add'));
+    fireEvent.click(screen.getByRole('button', { name: /add transaction/i }));
     fireEvent.click(screen.getByText(/Cancel/i));
     expect(screen.queryByText('Add Transaction')).not.toBeInTheDocument();
   });

@@ -58,6 +58,6 @@ describe('AppLayout – account switcher', () => {
         <div>content</div>
       </AppLayout>
     );
-    expect(screen.getByText('Add')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /add transaction/i })).toBeInTheDocument();
   });
 });

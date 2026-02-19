@@ -20,7 +20,7 @@ describe('TransactionItem', () => {
   it('shows expense amount in red with minus sign', () => {
     renderWithStore(<TransactionItem transaction={makeTx({ type: 'expense', amount: 42.5 })} />);
     const amountEl = screen.getByText(/-.*42/);
-    expect(amountEl.className).toContain('red');
+    expect(amountEl.className).toMatch(/red|rose/);
   });
 
   it('shows income amount in green with plus sign', () => {
@@ -75,7 +75,7 @@ describe('TransactionItem', () => {
     const svgBtns = Array.from(document.querySelectorAll('button')).filter(b => b.querySelector('svg'));
     if (svgBtns.length >= 2) {
       fireEvent.click(svgBtns[1]);
-      expect(screen.getByText(/Are you sure/i)).toBeInTheDocument();
+      expect(screen.getByText(/Delete this one/i)).toBeInTheDocument();
     }
   });
 

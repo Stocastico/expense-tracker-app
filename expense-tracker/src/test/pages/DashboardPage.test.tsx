@@ -28,8 +28,8 @@ describe('DashboardPage – empty state', () => {
 
   it('renders stat cards', () => {
     renderWithStore(<DashboardPage onNavigate={onNavigate} />);
-    expect(screen.getByText(/Expenses this month/i)).toBeInTheDocument();
-    expect(screen.getByText(/Income this month/i)).toBeInTheDocument();
+    expect(screen.getByText(/Spent this month/i)).toBeInTheDocument();
+    expect(screen.getByText(/Earned this month/i)).toBeInTheDocument();
     expect(screen.getByText(/Net balance/i)).toBeInTheDocument();
   });
 
@@ -44,9 +44,9 @@ describe('DashboardPage – empty state', () => {
     expect(onNavigate).toHaveBeenCalledWith('transactions');
   });
 
-  it('renders financial snapshot subtitle', () => {
+  it('renders net cash flow stat card', () => {
     renderWithStore(<DashboardPage onNavigate={onNavigate} />);
-    expect(screen.getByText(/financial snapshot/i)).toBeInTheDocument();
+    expect(screen.getByText(/Net cash flow/i)).toBeInTheDocument();
   });
 });
 

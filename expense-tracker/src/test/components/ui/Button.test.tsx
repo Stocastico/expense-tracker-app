@@ -30,13 +30,13 @@ describe('Button', () => {
   it('renders primary variant by default', () => {
     render(<Button>Primary</Button>);
     const btn = screen.getByRole('button');
-    expect(btn.className).toContain('bg-indigo-500');
+    expect(btn.className).toContain('from-indigo-500');
   });
 
   it('renders danger variant', () => {
     render(<Button variant="danger">Delete</Button>);
     const btn = screen.getByRole('button');
-    expect(btn.className).toContain('bg-red-500');
+    expect(btn.className).toContain('from-red-500');
   });
 
   it('renders secondary variant', () => {

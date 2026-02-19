@@ -10,15 +10,15 @@ export function Select({ label, error, options, className = '', ...props }: Sele
   return (
     <div className="flex flex-col gap-1">
       {label && (
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</label>
       )}
       <select
         className={`
-          w-full rounded-xl border bg-white dark:bg-gray-700
+          w-full rounded-2xl border bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm
           text-gray-900 dark:text-white
-          border-gray-200 dark:border-gray-600
-          focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
-          py-2.5 pl-3 pr-8 text-sm transition-colors
+          border-gray-200/80 dark:border-gray-700/50
+          focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-300 dark:focus:border-indigo-600
+          py-2.5 pl-3.5 pr-8 text-sm transition-all duration-200
           ${error ? 'border-red-400' : ''}
           ${className}
         `}
