@@ -3,9 +3,14 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
     "dev:full": "concurrently --kill-others -n vite,server -c cyan,green \"vite\" \"tsx server/index.ts\"",
+    "dev:electron": "concurrently --kill-others -n vite,electron -c cyan,magenta \"vite\" \"npm run electron:dev\"",
+    "electron:dev": "tsx electron/main.ts",
+    "electron:build": "tsc -b && vite build && node scripts/build-electron.js",
+    "electron:dist": "npm run electron:build && electron-builder --config electron-builder.json",
     "server": "tsx server/index.ts",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
@@ -26,6 +31,12 @@
     "recharts": "^3.7.0",
     "tesseract.js": "^7.0.0",
     "uuid": "^13.0.0"
+  },
+  "optionalDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.0",
+    "vite-plugin-electron": "^0.30.0",
+    "vite-plugin-electron-renderer": "^0.14.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

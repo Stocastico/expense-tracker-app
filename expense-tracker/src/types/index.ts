@@ -47,12 +47,23 @@ export interface Budget {
   updatedAt: string;
 }
 
+export type SyncProvider = 'dropbox' | 'onedrive' | 'icloud' | 'googledrive' | 'custom';
+
+export interface SyncConfig {
+  enabled: boolean;
+  provider: SyncProvider;
+  folderPath: string;       // absolute path to the cloud-synced folder
+  filename: string;          // e.g. "expense-tracker-data.json"
+  lastSyncedAt?: string;     // ISO timestamp
+}
+
 export interface AppSettings {
   currency: string;
   darkMode: boolean;
   categories: Category[];
   startOfMonth: number;    // day 1-28
   defaultAccount: AccountId;
+  syncConfig?: SyncConfig;
 }
 
 export interface AppState {

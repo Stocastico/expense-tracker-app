@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import type { Transaction, Budget, AppSettings, AppState, Category, AccountId } from '../types';
+import type { Transaction, Budget, AppSettings, AppState, Category, AccountId, SyncConfig } from '../types';
 import { loadState, saveState } from './storage';
 import { DEFAULT_SETTINGS } from './defaults';
 import { addDays, addWeeks, addMonths, addQuarters, addYears, isBefore, parseISO } from 'date-fns';
+import { isElectronApp, configureSync, readSyncFile, writeSyncFile, onSyncFileChanged } from './fileSync';
 
 function generateRecurringInstances(template: Transaction): Transaction[] {
   if (!template.isRecurring || !template.recurringFrequency) return [];
@@ -56,10 +57,13 @@ async function apiFetch(path: string, options?: RequestInit) {
 export function useStore() {
   const [state, setState] = useState<AppState>(() => loadState());
   const [serverConnected, setServerConnected] = useState(false);
+  const [fileSyncActive, setFileSyncActive] = useState(false);
   const [currentAccount, setCurrentAccount] = useState<AccountId>(
     () => (loadState().settings.defaultAccount ?? 'personal')
   );
   const serverRef = useRef(false);
+  const fileSyncRef = useRef(false);
+  const externalUpdateRef = useRef(false);
 
   // ── Server detection on mount ──────────────────────────────────────────
   useEffect(() => {
@@ -85,9 +89,58 @@ export function useStore() {
     detect();
   }, []);
 
+  // ── File sync initialization (Electron only) ──────────────────────────
+  useEffect(() => {
+    if (!isElectronApp()) return;
+    const initial = loadState();
+    const syncCfg = initial.settings.syncConfig;
+    if (!syncCfg?.enabled) return;
+
+    const setup = async () => {
+      const result = await configureSync(syncCfg);
+      if (!result.ok) return;
+      fileSyncRef.current = true;
+      setFileSyncActive(true);
+
+      // Load existing data from sync file if available
+      const syncData = await readSyncFile();
+      if (syncData) {
+        setState(s => ({
+          transactions: syncData.transactions ?? s.transactions,
+          budgets: syncData.budgets ?? s.budgets,
+          settings: { ...s.settings, ...syncData.settings, syncConfig: s.settings.syncConfig },
+        }));
+      }
+    };
+    setup();
+
+    // Listen for external changes from other devices
+    const unsub = onSyncFileChanged((incoming) => {
+      externalUpdateRef.current = true;
+      setState(s => ({
+        transactions: incoming.transactions ?? s.transactions,
+        budgets: incoming.budgets ?? s.budgets,
+        settings: { ...s.settings, ...incoming.settings, syncConfig: s.settings.syncConfig },
+      }));
+    });
+
+    return unsub;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Persist to localStorage when NOT using server ─────────────────────
   useEffect(() => {
     if (!serverRef.current) saveState(state);
+  }, [state]);
+
+  // ── Write to sync file on state change (Electron only) ────────────────
+  useEffect(() => {
+    if (!fileSyncRef.current) return;
+    // Don't write back changes that came from the sync file itself
+    if (externalUpdateRef.current) {
+      externalUpdateRef.current = false;
+      return;
+    }
+    writeSyncFile(state).catch(err => console.warn('File sync write failed:', err));
   }, [state]);
 
   // ── Dark mode ─────────────────────────────────────────────────────────
@@ -189,6 +242,30 @@ export function useStore() {
     setState({ transactions: [], budgets: [], settings: DEFAULT_SETTINGS });
   }, []);
 
+  // ── File sync management ────────────────────────────────────────────────
+
+  const enableFileSync = useCallback(async (syncConfig: SyncConfig) => {
+    const result = await configureSync(syncConfig);
+    if (!result.ok) return result;
+    fileSyncRef.current = true;
+    setFileSyncActive(true);
+    setState(s => ({ ...s, settings: { ...s.settings, syncConfig } }));
+    // Write current state to the sync file immediately
+    const currentState = { ...state, settings: { ...state.settings, syncConfig } };
+    await writeSyncFile(currentState);
+    return { ok: true };
+  }, [state]);
+
+  const disableFileSync = useCallback(async () => {
+    await configureSync({ enabled: false, provider: 'custom', folderPath: '', filename: '' });
+    fileSyncRef.current = false;
+    setFileSyncActive(false);
+    setState(s => ({
+      ...s,
+      settings: { ...s.settings, syncConfig: undefined },
+    }));
+  }, []);
+
   // Upload pending transactions from the mobile app queue to the server, then
   // merge them into the main state so the dashboard reflects them immediately.
   const uploadPending = useCallback(async (pending: Transaction[]): Promise<{ uploaded: number }> => {
@@ -206,6 +283,7 @@ export function useStore() {
   return {
     ...state,
     serverConnected,
+    fileSyncActive,
     currentAccount,
     setCurrentAccount,
     addTransaction,
@@ -219,6 +297,8 @@ export function useStore() {
     importData,
     clearAllData,
     uploadPending,
+    enableFileSync,
+    disableFileSync,
   };
 }
 
