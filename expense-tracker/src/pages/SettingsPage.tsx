@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Moon, Sun, Download, Upload, Trash2, Plus } from 'lucide-react';
+import { Moon, Sun, Download, Upload, Trash2, Plus, RefreshCw, FolderOpen, CloudOff } from 'lucide-react';
 import { useAppStore } from '../store/StoreContext';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -8,6 +8,8 @@ import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { exportToCSV, exportToJSON, importFromJSON } from '../utils/export';
 import { CURRENCIES } from '../store/defaults';
+import { isElectronApp, pickSyncFolder } from '../store/fileSync';
+import type { SyncProvider } from '../types';
 
 const CATEGORY_COLORS = [
   'bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-yellow-500', 'bg-lime-500',
@@ -74,12 +76,25 @@ function SettingRow({ label, description, children }: { label: string; descripti
   );
 }
 
+const SYNC_PROVIDERS: { id: SyncProvider; label: string; hint: string }[] = [
+  { id: 'dropbox',     label: 'Dropbox',        hint: '~/Dropbox' },
+  { id: 'onedrive',    label: 'OneDrive',       hint: '~/OneDrive' },
+  { id: 'icloud',      label: 'iCloud Drive',   hint: '~/Library/Mobile Documents/com~apple~CloudDocs' },
+  { id: 'googledrive', label: 'Google Drive',   hint: '~/Google Drive/My Drive' },
+  { id: 'custom',      label: 'Custom folder',  hint: 'Any folder' },
+];
+
 export function SettingsPage() {
-  const { settings, updateSettings, transactions, budgets, importData, clearAllData, deleteCategory } = useAppStore();
-  const { darkMode, currency, categories } = settings;
+  const { settings, updateSettings, transactions, budgets, importData, clearAllData, deleteCategory, fileSyncActive, enableFileSync, disableFileSync } = useAppStore();
+  const { darkMode, currency, categories, syncConfig } = settings;
   const [addCatOpen, setAddCatOpen] = useState(false);
   const [clearConfirm, setClearConfirm] = useState(false);
+  const [syncProvider, setSyncProvider] = useState<SyncProvider>(syncConfig?.provider ?? 'dropbox');
+  const [syncFolder, setSyncFolder] = useState(syncConfig?.folderPath ?? '');
+  const [syncError, setSyncError] = useState('');
+  const [syncBusy, setSyncBusy] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
+  const isElectron = isElectronApp();
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -87,10 +102,39 @@ export function SettingsPage() {
     try {
       const data = await importFromJSON(file);
       importData(data);
-    } catch (err) {
+    } catch {
       alert('Failed to import: invalid file format');
     }
     e.target.value = '';
+  };
+
+  const handlePickFolder = async () => {
+    const folder = await pickSyncFolder();
+    if (folder) {
+      setSyncFolder(folder);
+      setSyncError('');
+    }
+  };
+
+  const handleEnableSync = async () => {
+    if (!syncFolder.trim()) { setSyncError('Please select a folder'); return; }
+    setSyncBusy(true);
+    setSyncError('');
+    const result = await enableFileSync({
+      enabled: true,
+      provider: syncProvider,
+      folderPath: syncFolder.trim(),
+      filename: 'expense-tracker-data.json',
+      lastSyncedAt: new Date().toISOString(),
+    });
+    setSyncBusy(false);
+    if (!result.ok && 'error' in result) setSyncError(result.error ?? 'Failed to enable sync');
+  };
+
+  const handleDisableSync = async () => {
+    await disableFileSync();
+    setSyncFolder('');
+    setSyncError('');
   };
 
   const customCategories = categories.filter(c => !['food','groceries','transport','housing','utilities','health','entertainment','shopping','education','travel','insurance','subscriptions','personal','gifts','other_exp','salary','freelance','investment','other_inc'].includes(c.id));
@@ -201,6 +245,69 @@ export function SettingsPage() {
         </SettingRow>
         <input ref={importRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
       </Card>
+
+      {/* Cloud Sync (Electron only) */}
+      {isElectron && (
+        <Card>
+          <div className="px-4 pt-4 pb-2">
+            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Cloud Sync</h2>
+          </div>
+          {fileSyncActive ? (
+            <div className="px-4 pb-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <RefreshCw size={14} className="text-green-500 animate-spin" style={{ animationDuration: '3s' }} />
+                <span className="text-sm font-medium text-green-600 dark:text-green-400">Sync active</span>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Provider: {SYNC_PROVIDERS.find(p => p.id === syncConfig?.provider)?.label ?? syncConfig?.provider}
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 truncate" title={syncConfig?.folderPath}>
+                Folder: {syncConfig?.folderPath}
+              </p>
+              {syncConfig?.lastSyncedAt && (
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  Last synced: {new Date(syncConfig.lastSyncedAt).toLocaleString()}
+                </p>
+              )}
+              <Button variant="secondary" size="sm" onClick={handleDisableSync}>
+                <CloudOff size={14} />
+                Disable sync
+              </Button>
+            </div>
+          ) : (
+            <div className="px-4 pb-4 space-y-3">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Sync your data across devices by saving to a cloud-synced folder (Dropbox, OneDrive, iCloud Drive, or Google Drive).
+              </p>
+              <Select
+                label="Cloud provider"
+                value={syncProvider}
+                onChange={e => { setSyncProvider(e.target.value as SyncProvider); setSyncError(''); }}
+                options={SYNC_PROVIDERS.map(p => ({ value: p.id, label: p.label }))}
+              />
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Sync folder</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    className="flex-1 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    value={syncFolder}
+                    onChange={e => { setSyncFolder(e.target.value); setSyncError(''); }}
+                    placeholder={SYNC_PROVIDERS.find(p => p.id === syncProvider)?.hint ?? 'Path to folder'}
+                  />
+                  <Button variant="secondary" size="sm" onClick={handlePickFolder}>
+                    <FolderOpen size={14} />
+                  </Button>
+                </div>
+                {syncError && <p className="text-xs text-red-500">{syncError}</p>}
+              </div>
+              <Button variant="primary" size="sm" onClick={handleEnableSync} disabled={syncBusy}>
+                {syncBusy ? 'Configuring...' : 'Enable sync'}
+              </Button>
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* iOS Install hint */}
       <Card className="p-4 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-indigo-100 dark:border-indigo-800">

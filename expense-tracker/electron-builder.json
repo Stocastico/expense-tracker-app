@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.expense-tracker.app",
+  "productName": "Expense Tracker",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "dist/**/*",
+    "dist-electron/**/*"
+  ],
+  "mac": {
+    "target": ["dmg", "zip"],
+    "icon": "public/pwa-512x512.png",
+    "category": "public.app-category.finance",
+    "darkModeSupport": true
+  },
+  "dmg": {
+    "title": "Expense Tracker",
+    "contents": [
+      { "x": 130, "y": 220 },
+      { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+    ]
+  }
+}
