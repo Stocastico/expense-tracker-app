@@ -156,9 +156,9 @@ public struct StatsService {
 
             for transaction in monthTransactions {
                 if transaction.transactionType == .income {
-                    runningBalance += transaction.amount
+                    runningBalance += transaction.storedAmount
                 } else {
-                    runningBalance -= transaction.amount
+                    runningBalance -= transaction.storedAmount
                 }
             }
 

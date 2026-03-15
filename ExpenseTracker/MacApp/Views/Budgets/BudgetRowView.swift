@@ -4,13 +4,14 @@ import SwiftData
 struct BudgetRowView: View {
     let budget: Budget
     let transactions: [Transaction]
+    var startOfMonth: Int = 1
 
     private var category: Category {
         DefaultCategories.category(withId: budget.categoryId)
     }
 
     private var periodRange: (start: Date, end: Date) {
-        budget.currentPeriodRange()
+        budget.currentPeriodRange(startOfMonth: startOfMonth)
     }
 
     private var spent: Double {
@@ -18,7 +19,7 @@ struct BudgetRowView: View {
             transaction.transactionType == .expense
                 && transaction.categoryId == budget.categoryId
                 && transaction.date >= periodRange.start
-                && transaction.date < periodRange.end
+                && transaction.date <= periodRange.end
         }
         .reduce(0.0) { $0 + $1.storedAmount }
     }

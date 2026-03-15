@@ -68,7 +68,7 @@ struct BudgetsView: View {
 
                 Section("Budgets") {
                     ForEach(budgets) { budget in
-                        BudgetRowView(budget: budget, transactions: transactions)
+                        BudgetRowView(budget: budget, transactions: transactions, startOfMonth: currentSettings?.startOfMonth ?? 1)
                     }
                     .onDelete(perform: deleteBudgets)
                 }

@@ -65,7 +65,7 @@ struct DashboardView: View {
 
     private var budgetAlerts: [(budget: Budget, spent: Double, percentage: Double)] {
         budgets.compactMap { budget in
-            let range = budget.currentPeriodRange()
+            let range = budget.currentPeriodRange(startOfMonth: settings.startOfMonth)
             let spent = filteredTransactions
                 .filter {
                     $0.type == .expense

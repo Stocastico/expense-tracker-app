@@ -215,6 +215,14 @@ public class DataService {
             print("DataService: Cannot delete the last account.")
             return
         }
+
+        // Reassign orphaned transactions to another account before deletion
+        let fallbackAccount = accounts.first { $0.id != account.id }
+        let orphanedTransactions = account.transactions
+        for transaction in orphanedTransactions {
+            transaction.account = fallbackAccount
+        }
+
         modelContext.delete(account)
         saveContext()
     }
