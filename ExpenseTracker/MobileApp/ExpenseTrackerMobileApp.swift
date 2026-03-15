@@ -38,17 +38,25 @@ struct ExpenseTrackerMobileApp: App {
 
 struct MobileContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @State private var selectedTab: MobileTab = .add
+    @State private var selectedTab: MobileTab = .dashboard
     @State private var hasSeededAccounts = false
 
     enum MobileTab: Hashable {
+        case dashboard
         case add
         case history
+        case analytics
         case settings
     }
 
     var body: some View {
         TabView(selection: $selectedTab) {
+            MobileDashboardView()
+                .tabItem {
+                    Label("Home", systemImage: "house.fill")
+                }
+                .tag(MobileTab.dashboard)
+
             AddExpenseView()
                 .tabItem {
                     Label("Add", systemImage: "plus.circle.fill")
@@ -60,6 +68,12 @@ struct MobileContentView: View {
                     Label("History", systemImage: "list.bullet")
                 }
                 .tag(MobileTab.history)
+
+            MobileAnalyticsView()
+                .tabItem {
+                    Label("Analytics", systemImage: "chart.bar.xaxis")
+                }
+                .tag(MobileTab.analytics)
 
             MobileSettingsView()
                 .tabItem {
