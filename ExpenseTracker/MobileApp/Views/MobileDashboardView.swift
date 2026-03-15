@@ -49,7 +49,7 @@ struct MobileDashboardView: View {
 
     private var budgetAlerts: [(budget: Budget, spent: Double, percentage: Double)] {
         budgets.compactMap { budget in
-            let range = budget.currentPeriodRange()
+            let range = budget.currentPeriodRange(startOfMonth: settings.startOfMonth)
             let spent = allTransactions
                 .filter {
                     $0.type == .expense
@@ -171,13 +171,13 @@ struct MobileDashboardView: View {
             statCard(
                 title: "Income",
                 value: monthIncome.currencyFormatted(code: currency),
-                icon: "arrow.down.circle.fill",
+                icon: "arrow.up.circle.fill",
                 color: .green
             )
             statCard(
                 title: "Expenses",
                 value: monthExpenses.currencyFormatted(code: currency),
-                icon: "arrow.up.circle.fill",
+                icon: "arrow.down.circle.fill",
                 color: .red
             )
         }

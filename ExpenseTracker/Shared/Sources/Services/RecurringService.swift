@@ -36,6 +36,11 @@ public struct RecurringService {
                 break
             }
 
+            // Guard against infinite loop if date doesn't advance
+            guard nextDate > currentDate else {
+                break
+            }
+
             if nextDate > effectiveEndDate {
                 break
             }

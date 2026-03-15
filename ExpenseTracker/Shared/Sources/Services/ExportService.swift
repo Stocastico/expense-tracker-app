@@ -251,7 +251,10 @@ public struct ExportService {
 
         // Create transactions
         for et in exportData.transactions {
-            let transactionDate = isoFormatter.date(from: et.date) ?? Date()
+            guard let transactionDate = isoFormatter.date(from: et.date) else {
+                print("ExportService: Skipping transaction with unparseable date: \(et.date)")
+                continue
+            }
             let account = et.accountName.flatMap { accountMap[$0] }
 
             let transactionType = TransactionType(rawValue: et.type) ?? .expense

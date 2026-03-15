@@ -153,12 +153,17 @@ struct SettingsView: View {
             }
 
             Button {
-                jsonData = ExportService.exportToJSON(
+                guard let exported = ExportService.exportToJSON(
                     transactions: transactions,
                     budgets: budgets,
                     settings: currentSettings,
                     accounts: accounts
-                )
+                ) else {
+                    importError = "Failed to encode export data."
+                    showImportError = true
+                    return
+                }
+                jsonData = exported
                 showingJSONExporter = true
             } label: {
                 Label("Export JSON", systemImage: "doc.badge.arrow.up")

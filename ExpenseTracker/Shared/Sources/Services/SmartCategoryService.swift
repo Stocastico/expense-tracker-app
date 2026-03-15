@@ -11,6 +11,18 @@ public struct SmartCategoryService {
     ///   - description: The transaction description text.
     ///   - merchant: An optional merchant name.
     /// - Returns: A category ID string if a match is found, nil otherwise.
+    /// Checks if the text contains the keyword as a whole word (word boundary matching).
+    private static func containsWord(_ text: String, keyword: String) -> Bool {
+        // For single-word keywords, use word boundary matching to avoid false positives
+        // (e.g. "gas" matching inside "mortgage")
+        if !keyword.contains(" ") {
+            let words = text.components(separatedBy: .alphanumerics.inverted)
+            return words.contains(where: { $0 == keyword })
+        }
+        // For multi-word keywords, substring matching is appropriate
+        return text.contains(keyword)
+    }
+
     public static func suggestCategory(for description: String, merchant: String?) -> String? {
         let allCategories = DefaultCategories.all
 
@@ -22,7 +34,7 @@ public struct SmartCategoryService {
             for category in allCategories {
                 for keyword in category.keywords {
                     let keywordLower = keyword.lowercased()
-                    if merchantLower.contains(keywordLower) {
+                    if containsWord(merchantLower, keyword: keywordLower) {
                         return category.id
                     }
                 }
@@ -33,7 +45,7 @@ public struct SmartCategoryService {
         for category in allCategories {
             for keyword in category.keywords {
                 let keywordLower = keyword.lowercased()
-                if descriptionLower.contains(keywordLower) {
+                if containsWord(descriptionLower, keyword: keywordLower) {
                     return category.id
                 }
             }
@@ -42,7 +54,7 @@ public struct SmartCategoryService {
         // Third pass: check if merchant name itself matches a category name
         if let merchantLower = merchantLower, !merchantLower.isEmpty {
             for category in allCategories {
-                if merchantLower.contains(category.name.lowercased()) {
+                if containsWord(merchantLower, keyword: category.name.lowercased()) {
                     return category.id
                 }
             }

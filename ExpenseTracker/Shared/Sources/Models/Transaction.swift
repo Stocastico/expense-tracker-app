@@ -122,6 +122,6 @@ extension Transaction {
         formatter.currencyCode = currency
         formatter.minimumFractionDigits = 2
         formatter.maximumFractionDigits = 2
-        return formatter.string(from: NSNumber(value: storedAmount)) ?? "\(currency) \(storedAmount)"
+        return formatter.string(from: NSNumber(value: storedAmount)) ?? String(format: "%@ %.2f", currency, storedAmount)
     }
 }

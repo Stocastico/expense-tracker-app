@@ -111,7 +111,7 @@ struct MobileBudgetsView: View {
 
             Section("Category Budgets") {
                 ForEach(budgets) { budget in
-                    MobileBudgetRow(budget: budget, transactions: allTransactions, currency: currency)
+                    MobileBudgetRow(budget: budget, transactions: allTransactions, currency: currency, startOfMonth: settings.startOfMonth)
                 }
                 .onDelete(perform: deleteBudgets)
             }
@@ -133,13 +133,14 @@ struct MobileBudgetRow: View {
     let budget: Budget
     let transactions: [Transaction]
     let currency: String
+    var startOfMonth: Int = 1
 
     private var category: Category {
         DefaultCategories.category(withId: budget.categoryId)
     }
 
     private var periodRange: (start: Date, end: Date) {
-        budget.currentPeriodRange()
+        budget.currentPeriodRange(startOfMonth: startOfMonth)
     }
 
     private var spent: Double {
@@ -147,7 +148,7 @@ struct MobileBudgetRow: View {
             $0.type == .expense
                 && $0.categoryId == budget.categoryId
                 && $0.date >= periodRange.start
-                && $0.date < periodRange.end
+                && $0.date <= periodRange.end
         }.reduce(0.0) { $0 + $1.storedAmount }
     }
 
