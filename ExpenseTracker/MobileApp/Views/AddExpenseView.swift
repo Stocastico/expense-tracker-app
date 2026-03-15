@@ -19,14 +19,18 @@ struct AddExpenseView: View {
     @State private var showNotesField: Bool = false
     @State private var showSuccessFeedback: Bool = false
 
+    // Recurring
+    @State private var isRecurring: Bool = false
+    @State private var recurringFrequency: RecurringFrequency = .monthly
+    @State private var recurringEndDate: Date = Calendar.current.date(byAdding: .year, value: 1, to: Date()) ?? Date()
+    @State private var hasRecurringEndDate: Bool = false
+
     // MARK: - Computed Properties
 
     private var filteredCategories: [Category] {
         switch transactionType {
-        case .expense:
-            return DefaultCategories.expenseCategories
-        case .income:
-            return DefaultCategories.incomeCategories
+        case .expense: return DefaultCategories.expenseCategories
+        case .income:  return DefaultCategories.incomeCategories
         }
     }
 
@@ -64,6 +68,7 @@ struct AddExpenseView: View {
                     categoryGridSection
                     accountPickerSection
                     datePickerSection
+                    recurringSection
                     optionalFieldsSection
                     saveButton
                 }
@@ -113,7 +118,6 @@ struct AddExpenseView: View {
         }
         .pickerStyle(.segmented)
         .onChange(of: transactionType) { _, _ in
-            // Reset category when switching types if current is invalid
             if !filteredCategories.contains(where: { $0.id == selectedCategoryId }) {
                 selectedCategoryId = filteredCategories.first?.id ?? ""
             }
@@ -156,6 +160,8 @@ struct AddExpenseView: View {
 
     private func categoryButton(for category: Category) -> some View {
         Button {
+            let impact = UIImpactFeedbackGenerator(style: .light)
+            impact.impactOccurred()
             selectedCategoryId = category.id
         } label: {
             VStack(spacing: 4) {
@@ -206,6 +212,8 @@ struct AddExpenseView: View {
         let isSelected = (selectedAccountId ?? accounts.first(where: { $0.isDefault })?.id ?? accounts.first?.id) == account.id
 
         return Button {
+            let impact = UIImpactFeedbackGenerator(style: .light)
+            impact.impactOccurred()
             selectedAccountId = account.id
         } label: {
             HStack(spacing: 4) {
@@ -234,6 +242,56 @@ struct AddExpenseView: View {
     private var datePickerSection: some View {
         DatePicker("Date", selection: $date, displayedComponents: [.date])
             .datePickerStyle(.compact)
+    }
+
+    // MARK: - Recurring Section
+
+    private var recurringSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Toggle(isOn: $isRecurring) {
+                Label("Recurring Transaction", systemImage: "repeat")
+                    .font(.subheadline)
+            }
+            .tint(.accentColor)
+
+            if isRecurring {
+                VStack(alignment: .leading, spacing: 10) {
+                    Picker("Frequency", selection: $recurringFrequency) {
+                        ForEach(RecurringFrequency.allCases) { freq in
+                            Text(freq.displayName).tag(freq)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color(.systemGray6))
+                    )
+
+                    Toggle("Set end date", isOn: $hasRecurringEndDate)
+                        .font(.subheadline)
+                        .tint(.accentColor)
+
+                    if hasRecurringEndDate {
+                        DatePicker(
+                            "End Date",
+                            selection: $recurringEndDate,
+                            in: date...,
+                            displayedComponents: [.date]
+                        )
+                        .datePickerStyle(.compact)
+                    }
+                }
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(.systemGray6))
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: isRecurring)
     }
 
     // MARK: - Optional Fields
@@ -338,7 +396,6 @@ struct AddExpenseView: View {
             for: description,
             merchant: merchantValue
         ) {
-            // Only auto-suggest if the suggested category is valid for current type
             if filteredCategories.contains(where: { $0.id == suggestedId }) {
                 selectedCategoryId = suggestedId
             }
@@ -361,7 +418,10 @@ struct AddExpenseView: View {
             account: selectedAccount,
             notes: showNotesField && !notes.trimmingCharacters(in: .whitespaces).isEmpty
                 ? notes.trimmingCharacters(in: .whitespaces)
-                : nil
+                : nil,
+            isRecurring: isRecurring,
+            recurringFrequency: isRecurring ? recurringFrequency : nil,
+            recurringEndDate: isRecurring && hasRecurringEndDate ? recurringEndDate : nil
         )
 
         modelContext.insert(transaction)
@@ -370,18 +430,21 @@ struct AddExpenseView: View {
             try modelContext.save()
         } catch {
             print("Failed to save transaction: \(error.localizedDescription)")
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.error)
             return
         }
 
-        // Show success feedback
+        // Haptic success feedback
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+
         withAnimation(.easeInOut(duration: 0.3)) {
             showSuccessFeedback = true
         }
 
-        // Reset form
         resetForm()
 
-        // Hide feedback after a brief delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             withAnimation(.easeInOut(duration: 0.3)) {
                 showSuccessFeedback = false
@@ -398,6 +461,10 @@ struct AddExpenseView: View {
         notes = ""
         showMerchantField = false
         showNotesField = false
+        isRecurring = false
+        recurringFrequency = .monthly
+        hasRecurringEndDate = false
+        recurringEndDate = Calendar.current.date(byAdding: .year, value: 1, to: Date()) ?? Date()
     }
 
     private func fetchSettings() -> AppSettings {

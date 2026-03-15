@@ -7,17 +7,34 @@ struct ExpenseHistoryView: View {
 
     @State private var searchText: String = ""
     @State private var selectedTransaction: Transaction?
+    @State private var filterType: FilterType = .all
+
+    enum FilterType: String, CaseIterable {
+        case all = "All"
+        case expense = "Expenses"
+        case income = "Income"
+    }
 
     // MARK: - Computed Properties
 
     private var filteredTransactions: [Transaction] {
-        let limited = Array(allTransactions.prefix(50))
-        guard !searchText.isEmpty else { return limited }
+        var result = Array(allTransactions.prefix(200))
+
+        // Filter by type
+        switch filterType {
+        case .expense: result = result.filter { $0.type == .expense }
+        case .income:  result = result.filter { $0.type == .income }
+        case .all:     break
+        }
+
+        // Filter by search
+        guard !searchText.isEmpty else { return result }
         let lowered = searchText.lowercased()
-        return limited.filter { transaction in
+        return result.filter { transaction in
             transaction.descriptionText.lowercased().contains(lowered)
-            || (transaction.merchant?.lowercased().contains(lowered) ?? false)
-            || (transaction.notes?.lowercased().contains(lowered) ?? false)
+                || (transaction.merchant?.lowercased().contains(lowered) ?? false)
+                || (transaction.notes?.lowercased().contains(lowered) ?? false)
+                || DefaultCategories.category(withId: transaction.categoryId).name.lowercased().contains(lowered)
         }
     }
 
@@ -41,19 +58,59 @@ struct ExpenseHistoryView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if filteredTransactions.isEmpty {
-                    emptyStateView
-                } else {
-                    transactionList
+            VStack(spacing: 0) {
+                filterChips
+                Group {
+                    if filteredTransactions.isEmpty {
+                        emptyStateView
+                    } else {
+                        transactionList
+                    }
                 }
             }
             .navigationTitle("History")
             .searchable(text: $searchText, prompt: "Search transactions")
             .sheet(item: $selectedTransaction) { transaction in
-                TransactionDetailSheet(transaction: transaction)
+                TransactionDetailSheet(transaction: transaction) { updated in
+                    updateTransaction(updated)
+                }
             }
         }
+    }
+
+    // MARK: - Filter Chips
+
+    private var filterChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(FilterType.allCases, id: \.self) { type in
+                    filterChip(for: type)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 10)
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+
+    private func filterChip(for type: FilterType) -> some View {
+        let isSelected = filterType == type
+        return Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                filterType = type
+            }
+        } label: {
+            Text(type.rawValue)
+                .font(.subheadline.weight(isSelected ? .semibold : .regular))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 7)
+                .background(
+                    Capsule()
+                        .fill(isSelected ? Color.accentColor : Color(.secondarySystemGroupedBackground))
+                )
+                .foregroundStyle(isSelected ? .white : .primary)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Empty State
@@ -62,10 +119,12 @@ struct ExpenseHistoryView: View {
         ContentUnavailableView {
             Label("No Transactions", systemImage: "tray")
         } description: {
-            if searchText.isEmpty {
+            if searchText.isEmpty && filterType == .all {
                 Text("Add your first transaction to get started.")
+            } else if !searchText.isEmpty {
+                Text("No transactions match \"\(searchText)\".")
             } else {
-                Text("No transactions match your search.")
+                Text("No \(filterType.rawValue.lowercased()) found.")
             }
         }
     }
@@ -95,15 +154,24 @@ struct ExpenseHistoryView: View {
     // MARK: - Actions
 
     private func deleteTransactions(from transactions: [Transaction], at offsets: IndexSet) {
+        let generator = UINotificationFeedbackGenerator()
+        generator.prepare()
+
         for index in offsets {
             let transaction = transactions[index]
             modelContext.delete(transaction)
         }
         do {
             try modelContext.save()
+            generator.notificationOccurred(.success)
         } catch {
             print("Failed to delete transaction: \(error.localizedDescription)")
+            generator.notificationOccurred(.error)
         }
+    }
+
+    private func updateTransaction(_ transaction: Transaction) {
+        try? modelContext.save()
     }
 }
 
@@ -127,9 +195,13 @@ struct TransactionRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(category.icon)
-                .font(.title2)
-                .frame(width: 36, height: 36)
+            ZStack {
+                Circle()
+                    .fill(Color(hex: category.color).opacity(0.12))
+                    .frame(width: 40, height: 40)
+                Text(category.icon)
+                    .font(.body)
+            }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(transaction.descriptionText)
@@ -140,14 +212,25 @@ struct TransactionRow: View {
                     Text(accountName)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                } else {
+                    Text(category.name)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
 
             Spacer()
 
-            Text(formattedAmount)
-                .font(.body.weight(.medium).monospacedDigit())
-                .foregroundStyle(amountColor)
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(formattedAmount)
+                    .font(.body.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(amountColor)
+                if transaction.isRecurring {
+                    Image(systemName: "repeat")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
         .padding(.vertical, 2)
     }
@@ -157,7 +240,10 @@ struct TransactionRow: View {
 
 struct TransactionDetailSheet: View {
     let transaction: Transaction
+    let onSave: (Transaction) -> Void
+
     @Environment(\.dismiss) private var dismiss
+    @State private var isEditing = false
 
     private var category: Category {
         DefaultCategories.category(withId: transaction.categoryId)
@@ -166,10 +252,26 @@ struct TransactionDetailSheet: View {
     var body: some View {
         NavigationStack {
             List {
+                // Header card
+                Section {
+                    VStack(spacing: 8) {
+                        Text(category.icon)
+                            .font(.system(size: 44))
+                        Text(transaction.type == .expense
+                             ? "-\(transaction.formattedAmount)"
+                             : "+\(transaction.formattedAmount)")
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .foregroundStyle(transaction.type == .expense ? .red : .green)
+                        Text(transaction.descriptionText)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                }
+
                 Section("Details") {
                     detailRow("Type", value: transaction.type.displayName)
-                    detailRow("Amount", value: transaction.formattedAmount)
-                    detailRow("Description", value: transaction.descriptionText)
                     detailRow("Category", value: category.displayName)
                     detailRow("Date", value: formattedDate(transaction.date))
 
