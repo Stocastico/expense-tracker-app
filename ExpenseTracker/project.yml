@@ -51,12 +51,9 @@ targets:
     entitlements:
       path: MacApp/ExpenseTrackerMac.entitlements
       properties:
-        com.apple.developer.icloud-container-identifiers:
-          - iCloud.com.expensetracker.shared
-        com.apple.developer.icloud-services:
-          - CloudKit
         com.apple.security.app-sandbox: true
         com.apple.security.network.client: true
+        com.apple.security.network.server: true
 
   ExpenseTrackerMobile:
     type: application
@@ -77,15 +74,15 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: true
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Expense Tracker uses the local network to sync data with the macOS app."
+        INFOPLIST_KEY_NSBonjourServices:
+          - _exp-tracker._tcp
         SWIFT_EMIT_LOC_STRINGS: true
         CODE_SIGN_ENTITLEMENTS: MobileApp/ExpenseTrackerMobile.entitlements
     entitlements:
       path: MobileApp/ExpenseTrackerMobile.entitlements
       properties:
-        com.apple.developer.icloud-container-identifiers:
-          - iCloud.com.expensetracker.shared
-        com.apple.developer.icloud-services:
-          - CloudKit
+        com.apple.security.network.client: true
 
   ExpenseTrackerTests:
     type: bundle.unit-test

@@ -4,6 +4,7 @@ import SwiftData
 @main
 struct ExpenseTrackerMobileApp: App {
     let modelContainer: ModelContainer
+    @StateObject private var syncService = SyncService(role: .browser)
 
     init() {
         do {
@@ -15,7 +16,7 @@ struct ExpenseTrackerMobileApp: App {
             ])
             let configuration = ModelConfiguration(
                 schema: schema,
-                cloudKitDatabase: .automatic
+                cloudKitDatabase: .none
             )
             modelContainer = try ModelContainer(
                 for: schema,
@@ -30,6 +31,11 @@ struct ExpenseTrackerMobileApp: App {
         WindowGroup {
             MobileContentView()
                 .modelContainer(modelContainer)
+                .environmentObject(syncService)
+                .onAppear {
+                    syncService.setModelContext(modelContainer.mainContext)
+                    syncService.start()
+                }
         }
     }
 }
