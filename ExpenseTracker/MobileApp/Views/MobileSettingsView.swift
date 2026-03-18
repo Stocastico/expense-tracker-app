@@ -3,6 +3,7 @@ import SwiftData
 
 struct MobileSettingsView: View {
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var syncService: SyncService
     @Query(sort: \Account.createdAt) private var accounts: [Account]
 
     @State private var settings: AppSettings?
@@ -162,22 +163,88 @@ struct MobileSettingsView: View {
     private var syncSection: some View {
         Section("Sync") {
             HStack {
-                Image(systemName: "icloud")
-                    .foregroundStyle(.blue)
-                Text("iCloud Sync")
+                Image(systemName: syncStatusIcon)
+                    .foregroundStyle(syncStatusColor)
+                Text("Local Network Sync")
                 Spacer()
-                Text("Active")
-                    .foregroundStyle(.green)
+                Text(syncStatusLabel)
+                    .foregroundStyle(syncStatusColor)
                     .font(.subheadline)
             }
 
-            HStack {
-                Image(systemName: "arrow.triangle.2.circlepath")
-                    .foregroundStyle(.secondary)
-                Text("Shared with macOS app")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+            if let peerName = syncService.connectedPeerName {
+                HStack {
+                    Image(systemName: "desktopcomputer")
+                        .foregroundStyle(.secondary)
+                    Text("Connected to \(peerName)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             }
+
+            if let lastSync = syncService.lastSyncDate {
+                HStack {
+                    Image(systemName: "clock")
+                        .foregroundStyle(.secondary)
+                    Text("Last sync: \(lastSync.formatted(.relative(presentation: .named)))")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Button {
+                if syncService.isActive {
+                    syncService.stop()
+                } else {
+                    syncService.start()
+                }
+            } label: {
+                Label(
+                    syncService.isActive ? "Stop Sync" : "Start Sync",
+                    systemImage: syncService.isActive ? "stop.circle" : "play.circle"
+                )
+            }
+
+            if syncService.connectedPeerName != nil {
+                Button {
+                    syncService.syncNow()
+                } label: {
+                    Label("Sync Now", systemImage: "arrow.triangle.2.circlepath")
+                }
+            }
+        }
+    }
+
+    private var syncStatusIcon: String {
+        switch syncService.syncStatus {
+        case .idle: return "wifi.slash"
+        case .browsing: return "wifi"
+        case .connecting, .syncing: return "arrow.triangle.2.circlepath"
+        case .completed: return "checkmark.circle.fill"
+        case .error: return "exclamationmark.triangle.fill"
+        case .advertising: return "antenna.radiowaves.left.and.right"
+        }
+    }
+
+    private var syncStatusColor: Color {
+        switch syncService.syncStatus {
+        case .idle: return .secondary
+        case .browsing, .advertising: return .blue
+        case .connecting, .syncing: return .orange
+        case .completed: return .green
+        case .error: return .red
+        }
+    }
+
+    private var syncStatusLabel: String {
+        switch syncService.syncStatus {
+        case .idle: return "Off"
+        case .browsing: return "Searching..."
+        case .connecting: return "Connecting..."
+        case .syncing: return "Syncing..."
+        case .completed: return "Connected"
+        case .error(let msg): return msg
+        case .advertising: return "Waiting..."
         }
     }
 

@@ -1,6 +1,6 @@
 # Expense Tracker
 
-A native Swift expense tracker for macOS and iOS, built with SwiftUI and SwiftData. Transactions sync automatically between your Mac and iPhone/iPad via CloudKit.
+A native Swift expense tracker for macOS and iOS, built with SwiftUI and SwiftData. Transactions sync between your Mac and iPhone/iPad over the local network using MultipeerConnectivity — no paid Apple Developer account required.
 
 ---
 
@@ -14,7 +14,7 @@ A native Swift expense tracker for macOS and iOS, built with SwiftUI and SwiftDa
 | **History** | Searchable transaction list with All/Income/Expense filter chips, grouped by date |
 | **Analytics** | Monthly income vs expenses bar chart, category breakdown donut chart, balance trend line, savings rate & spending prediction |
 | **Budgets** | Per-category spending limits with progress bars and over-budget alerts |
-| **Settings** | Currency, accounts, iCloud sync status |
+| **Settings** | Currency, accounts, local network sync status |
 
 ### macOS App
 | Feature | Description |
@@ -29,8 +29,10 @@ A native Swift expense tracker for macOS and iOS, built with SwiftUI and SwiftDa
 | **Settings** | Currency, accounts, custom categories, import/export |
 
 ### Sync
-- Automatic **iCloud CloudKit** sync between macOS and iOS
-- Shared data model — transactions added on iPhone appear instantly on Mac
+- **Local network sync** between macOS and iOS via MultipeerConnectivity
+- No paid Apple Developer account needed — works with a free Apple ID
+- Mac advertises on the network, iPhone discovers and connects automatically
+- Bidirectional merge with last-write-wins conflict resolution
 
 ---
 
@@ -68,7 +70,8 @@ ExpenseTracker/
 │   │   │   ├── RecurringService.swift
 │   │   │   ├── ExportService.swift
 │   │   │   ├── PDFImportService.swift
-│   │   │   └── OCRService.swift
+│   │   │   ├── OCRService.swift
+│   │   │   └── SyncService.swift
 │   │   ├── Extensions/          # Date, Currency, Color helpers
 │   │   └── Defaults/            # Default categories
 │   └── Tests/                   # Unit tests
@@ -140,7 +143,7 @@ Press **⌘B** to build, **⌘R** to run.
 2. Choose any iPhone or iPad simulator from the device picker (e.g. iPhone 16 Pro)
 3. Press **⌘R**
 
-> **Note:** CloudKit sync is **not available** in the Simulator. The app falls back to local-only SwiftData storage. All other features work fully.
+> **Note:** MultipeerConnectivity sync is **not available** in the Simulator. The app uses local-only SwiftData storage. All other features work fully.
 
 ---
 
@@ -148,39 +151,28 @@ Press **⌘B** to build, **⌘R** to run.
 
 ### Free Apple ID (no paid account)
 
-A free Apple ID lets you sideload the app for **7-day** test periods.
+A free Apple ID lets you sideload the app for **7-day** test periods. **No paid Apple Developer account is needed** — sync uses MultipeerConnectivity over the local network.
 
 1. In Xcode → **Settings → Accounts**, add your Apple ID
 2. Select your iPhone as the run destination
 3. In the project target settings → **Signing & Capabilities**, set:
    - Team: your personal team (shown as "Your Name (Personal Team)")
    - Bundle Identifier: change `com.expensetracker.mobile` to something unique like `com.yourname.expensetracker`
-4. **Disable CloudKit** for free accounts (CloudKit requires a paid account):
-   - Remove the CloudKit capability from the target
-   - In `ExpenseTrackerMobileApp.swift`, change `.automatic` to `.none`:
-     ```swift
-     let configuration = ModelConfiguration(
-         schema: schema,
-         cloudKitDatabase: .none   // ← change from .automatic
-     )
-     ```
-5. Connect your device, trust it, press **⌘R**
-6. On your iPhone: **Settings → General → VPN & Device Management** → trust your developer certificate
+4. Connect your device, trust it, press **⌘R**
+5. On your iPhone: **Settings → General → VPN & Device Management** → trust your developer certificate
+6. When prompted, allow "Expense Tracker" to use the local network
 
 > **Limitation:** Apps signed with a free account expire after 7 days and must be re-signed.
 
-### Paid Apple Developer Account ($99/year)
+### Syncing between devices
 
-With a paid account you get:
-- ✅ CloudKit sync between macOS and iOS
-- ✅ 1-year code signing (no re-signing every 7 days)
-- ✅ TestFlight distribution
-- ✅ App Store submission
+Both devices must be on the **same Wi-Fi network**:
 
-**CloudKit setup for paid account:**
-1. Sign in to [developer.apple.com](https://developer.apple.com) and create an App ID with CloudKit enabled
-2. In Xcode → **Signing & Capabilities**, ensure CloudKit is listed and your container is `iCloud.com.expensetracker.shared`
-3. In the [CloudKit Console](https://icloud.developer.apple.com), create the schema (or let the app create it on first run in Development environment)
+1. Open the macOS app — it automatically advertises on the local network
+2. Open the iOS app — it discovers the Mac and connects automatically
+3. Data syncs bidirectionally on connect (and via "Sync Now" in Settings)
+
+The sync uses last-write-wins conflict resolution based on the `updatedAt` timestamp.
 
 ---
 
@@ -195,7 +187,7 @@ open ExpenseTracker.xcodeproj
 
 Select the **ExpenseTrackerMac** scheme, then press **⌘R**. The app opens as a standard macOS window with a sidebar.
 
-**macOS CloudKit:** The entitlements file at `MacApp/ExpenseTrackerMac.entitlements` already includes CloudKit. With a paid developer account and proper provisioning, sync is automatic.
+**macOS sync:** The Mac app automatically advertises on the local network when launched. The iOS app discovers and connects to it for bidirectional sync.
 
 ---
 
@@ -221,13 +213,12 @@ Tests cover:
 
 ## Debugging Tips
 
-### CloudKit sync not working
-1. Ensure both devices are signed into the **same iCloud account**
-2. Check **Settings → Apple ID → iCloud** and confirm iCloud Drive is enabled
-3. On macOS: **System Settings → Apple ID → iCloud → iCloud Drive** must be on
-4. CloudKit containers can take a few minutes to propagate on first sync
-5. Use the [CloudKit Console](https://icloud.developer.apple.com) to inspect records
-6. In Xcode, enable **CloudKit logging**: Edit Scheme → Run → Arguments → add `-com.apple.CoreData.CloudKitDebug 1`
+### Sync not working
+1. Ensure both devices are on the **same Wi-Fi network**
+2. On iOS, check that the app has **Local Network** permission: **Settings → Privacy & Security → Local Network** → enable Expense Tracker
+3. On macOS, ensure the firewall allows incoming connections for Expense Tracker
+4. Try toggling "Stop Sync" / "Start Sync" in the iOS Settings tab
+5. If using a corporate/guest network, peer-to-peer discovery may be blocked — try a home network
 
 ### "No such module 'ExpenseTrackerShared'" build error
 Re-run `xcodegen generate` from the `ExpenseTracker/` directory. The shared framework target must be built before the app targets.
@@ -241,7 +232,7 @@ The project references entitlement files that are auto-generated by XcodeGen. If
 ### App crashes on launch (ModelContainer failure)
 Check the console for the `fatalError` message from `ModelContainer` initialisation. Common causes:
 - Schema mismatch after a model change → delete the app and reinstall
-- CloudKit container not provisioned → switch to `.none` during development
+- Local network permission denied → re-enable in iOS Settings → Privacy & Security → Local Network
 
 ### Xcode 15 vs Xcode 16
 The project targets Swift 5.9 and is compatible with both Xcode 15 and 16. If you're on Xcode 16, you may see deprecation warnings for `@retroactive` conformance — these are warnings only and don't affect functionality.
@@ -270,18 +261,19 @@ The project targets Swift 5.9 and is compatible with both Xcode 15 and 16. If yo
 │  PDFImportService · OCRService           │
 │  ExportService                           │
 └──────────────┬───────────────────────────┘
-               │ ModelConfiguration(.automatic)
+               │ MultipeerConnectivity
 ┌──────────────▼───────────────────────────┐
-│          CloudKit (NSPersistentCloudKit) │
-│  Container: iCloud.com.expensetracker.shared │
+│          SyncService                     │
+│  macOS: Advertiser (receives data)       │
+│  iOS:   Browser (sends data)             │
 └──────────────────────────────────────────┘
 ```
 
 **Key design decisions:**
-- **SwiftData + CloudKit** — zero-boilerplate sync; no custom sync logic needed
+- **MultipeerConnectivity** — local network sync between devices; no paid Apple Developer account needed
 - **Shared framework** — all models and services are in `ExpenseTrackerShared`, compiled for both macOS and iOS
 - **XcodeGen** — `project.yml` is the source of truth; `.xcodeproj` is git-ignored and regenerated locally
-- **No external dependencies** — only Apple system frameworks (SwiftUI, SwiftData, Charts, Vision, CloudKit, PDFKit)
+- **No external dependencies** — only Apple system frameworks (SwiftUI, SwiftData, Charts, Vision, MultipeerConnectivity, PDFKit)
 - **Decimal for money** — `Transaction.amount` exposed as `Decimal` (stored as `Double` for SwiftData compatibility), with `Double` extension for display
 
 ---
