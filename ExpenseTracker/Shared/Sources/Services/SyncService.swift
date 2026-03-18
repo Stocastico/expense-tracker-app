@@ -218,88 +218,7 @@ public final class SyncService: NSObject, ObservableObject {
 
         do {
             let payload = try JSONDecoder().decode(SyncPayload.self, from: data)
-
-            // Merge accounts first (transactions reference them)
-            let existingAccounts = (try? context.fetch(FetchDescriptor<Account>())) ?? []
-            let existingAccountMap = Dictionary(uniqueKeysWithValues: existingAccounts.map { ($0.id, $0) })
-
-            for syncAccount in payload.accounts {
-                if let existing = existingAccountMap[syncAccount.id] {
-                    // Update if the incoming one is newer
-                    if syncAccount.createdAt > existing.createdAt {
-                        existing.name = syncAccount.name
-                        existing.icon = syncAccount.icon
-                        existing.color = syncAccount.color
-                        existing.isDefault = syncAccount.isDefault
-                    }
-                } else {
-                    let account = Account(
-                        id: syncAccount.id,
-                        name: syncAccount.name,
-                        icon: syncAccount.icon,
-                        color: syncAccount.color,
-                        isDefault: syncAccount.isDefault,
-                        createdAt: syncAccount.createdAt
-                    )
-                    context.insert(account)
-                }
-            }
-
-            // Re-fetch accounts after merge to link transactions
-            let allAccounts = (try? context.fetch(FetchDescriptor<Account>())) ?? []
-            let accountMap = Dictionary(uniqueKeysWithValues: allAccounts.map { ($0.id, $0) })
-
-            // Merge transactions
-            let existingTransactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
-            let existingTransactionMap = Dictionary(uniqueKeysWithValues: existingTransactions.map { ($0.id, $0) })
-
-            for syncTx in payload.transactions {
-                if let existing = existingTransactionMap[syncTx.id] {
-                    // Last-write-wins
-                    if syncTx.updatedAt > existing.updatedAt {
-                        existing.typeRaw = syncTx.typeRaw
-                        existing.storedAmount = syncTx.storedAmount
-                        existing.currency = syncTx.currency
-                        existing.descriptionText = syncTx.descriptionText
-                        existing.merchant = syncTx.merchant
-                        existing.date = syncTx.date
-                        existing.categoryId = syncTx.categoryId
-                        existing.account = syncTx.accountId.flatMap { accountMap[$0] }
-                        existing.tagsString = syncTx.tagsString
-                        existing.notes = syncTx.notes
-                        existing.isRecurring = syncTx.isRecurring
-                        existing.recurringFrequencyRaw = syncTx.recurringFrequencyRaw
-                        existing.recurringEndDate = syncTx.recurringEndDate
-                        existing.recurringParentId = syncTx.recurringParentId
-                        existing.receiptData = syncTx.receiptData
-                        existing.updatedAt = syncTx.updatedAt
-                    }
-                } else {
-                    let transaction = Transaction(
-                        id: syncTx.id,
-                        type: TransactionType(rawValue: syncTx.typeRaw) ?? .expense,
-                        amount: syncTx.storedAmount,
-                        currency: syncTx.currency,
-                        descriptionText: syncTx.descriptionText,
-                        merchant: syncTx.merchant,
-                        date: syncTx.date,
-                        categoryId: syncTx.categoryId,
-                        account: syncTx.accountId.flatMap { accountMap[$0] },
-                        tags: syncTx.tagsString.isEmpty ? [] : syncTx.tagsString.components(separatedBy: ","),
-                        notes: syncTx.notes,
-                        isRecurring: syncTx.isRecurring,
-                        recurringFrequency: syncTx.recurringFrequencyRaw.flatMap { RecurringFrequency(rawValue: $0) },
-                        recurringEndDate: syncTx.recurringEndDate,
-                        recurringParentId: syncTx.recurringParentId,
-                        receiptData: syncTx.receiptData,
-                        createdAt: syncTx.createdAt,
-                        updatedAt: syncTx.updatedAt
-                    )
-                    context.insert(transaction)
-                }
-            }
-
-            try context.save()
+            try SyncService.mergePayload(payload, into: context)
             lastSyncDate = Date()
             syncStatus = .completed
 
@@ -310,6 +229,95 @@ public final class SyncService: NSObject, ObservableObject {
         } catch {
             syncStatus = .error("Merge failed: \(error.localizedDescription)")
         }
+    }
+
+    /// Merges a decoded sync payload into the given model context.
+    ///
+    /// - Accounts are merged first (transactions reference them).
+    /// - Transactions use last-write-wins based on `updatedAt`.
+    /// - New records are inserted; existing records are updated only if the incoming data is newer.
+    static func mergePayload(_ payload: SyncPayload, into context: ModelContext) throws {
+        // Merge accounts first (transactions reference them)
+        let existingAccounts = (try? context.fetch(FetchDescriptor<Account>())) ?? []
+        let existingAccountMap = Dictionary(uniqueKeysWithValues: existingAccounts.map { ($0.id, $0) })
+
+        for syncAccount in payload.accounts {
+            if let existing = existingAccountMap[syncAccount.id] {
+                // Update if the incoming one is newer
+                if syncAccount.createdAt > existing.createdAt {
+                    existing.name = syncAccount.name
+                    existing.icon = syncAccount.icon
+                    existing.color = syncAccount.color
+                    existing.isDefault = syncAccount.isDefault
+                }
+            } else {
+                let account = Account(
+                    id: syncAccount.id,
+                    name: syncAccount.name,
+                    icon: syncAccount.icon,
+                    color: syncAccount.color,
+                    isDefault: syncAccount.isDefault,
+                    createdAt: syncAccount.createdAt
+                )
+                context.insert(account)
+            }
+        }
+
+        // Re-fetch accounts after merge to link transactions
+        let allAccounts = (try? context.fetch(FetchDescriptor<Account>())) ?? []
+        let accountMap = Dictionary(uniqueKeysWithValues: allAccounts.map { ($0.id, $0) })
+
+        // Merge transactions
+        let existingTransactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
+        let existingTransactionMap = Dictionary(uniqueKeysWithValues: existingTransactions.map { ($0.id, $0) })
+
+        for syncTx in payload.transactions {
+            if let existing = existingTransactionMap[syncTx.id] {
+                // Last-write-wins
+                if syncTx.updatedAt > existing.updatedAt {
+                    existing.typeRaw = syncTx.typeRaw
+                    existing.storedAmount = syncTx.storedAmount
+                    existing.currency = syncTx.currency
+                    existing.descriptionText = syncTx.descriptionText
+                    existing.merchant = syncTx.merchant
+                    existing.date = syncTx.date
+                    existing.categoryId = syncTx.categoryId
+                    existing.account = syncTx.accountId.flatMap { accountMap[$0] }
+                    existing.tagsString = syncTx.tagsString
+                    existing.notes = syncTx.notes
+                    existing.isRecurring = syncTx.isRecurring
+                    existing.recurringFrequencyRaw = syncTx.recurringFrequencyRaw
+                    existing.recurringEndDate = syncTx.recurringEndDate
+                    existing.recurringParentId = syncTx.recurringParentId
+                    existing.receiptData = syncTx.receiptData
+                    existing.updatedAt = syncTx.updatedAt
+                }
+            } else {
+                let transaction = Transaction(
+                    id: syncTx.id,
+                    type: TransactionType(rawValue: syncTx.typeRaw) ?? .expense,
+                    amount: syncTx.storedAmount,
+                    currency: syncTx.currency,
+                    descriptionText: syncTx.descriptionText,
+                    merchant: syncTx.merchant,
+                    date: syncTx.date,
+                    categoryId: syncTx.categoryId,
+                    account: syncTx.accountId.flatMap { accountMap[$0] },
+                    tags: syncTx.tagsString.isEmpty ? [] : syncTx.tagsString.components(separatedBy: ","),
+                    notes: syncTx.notes,
+                    isRecurring: syncTx.isRecurring,
+                    recurringFrequency: syncTx.recurringFrequencyRaw.flatMap { RecurringFrequency(rawValue: $0) },
+                    recurringEndDate: syncTx.recurringEndDate,
+                    recurringParentId: syncTx.recurringParentId,
+                    receiptData: syncTx.receiptData,
+                    createdAt: syncTx.createdAt,
+                    updatedAt: syncTx.updatedAt
+                )
+                context.insert(transaction)
+            }
+        }
+
+        try context.save()
     }
 }
 

@@ -193,21 +193,72 @@ Select the **ExpenseTrackerMac** scheme, then press **⌘R**. The app opens as a
 
 ## Running Tests
 
+### From the command line
+
 ```bash
-# From inside the ExpenseTracker directory
+cd ExpenseTracker
 xcodegen generate
-xcodebuild test -scheme ExpenseTrackerMac -destination "platform=macOS"
+
+# Run tests for macOS
+xcodebuild test \
+  -scheme ExpenseTrackerMac \
+  -destination "platform=macOS"
+
+# Run tests for iOS (Simulator)
+xcodebuild test \
+  -scheme ExpenseTrackerMobile \
+  -destination "platform=iOS Simulator,name=iPhone 16 Pro"
 ```
 
-Or in Xcode: **⌘U** runs all tests for the selected scheme.
+### From Xcode
 
-Tests cover:
-- `StatsServiceTests` — monthly totals, category breakdown, savings rate, trend calculations
-- `ModelTests` — Transaction, Account, Budget model creation and computed properties
-- `SmartCategoryTests` — keyword-based auto-categorisation
-- `RecurringServiceTests` — recurring transaction generation
-- `PDFImportTests` — bank statement regex parsing
-- `ExportServiceTests` — JSON/CSV export formatting
+1. Open the project: `open ExpenseTracker.xcodeproj`
+2. Select the scheme you want to test:
+   - **ExpenseTrackerMac** — runs tests against macOS
+   - **ExpenseTrackerMobile** — runs tests against an iOS Simulator
+3. Press **⌘U** to run all tests
+4. View results in the **Test Navigator** (⌘6) or the **Report Navigator** (⌘9)
+
+> **Tip:** To run a single test class or method, click the diamond icon next to it in the Test Navigator, or right-click and choose "Run".
+
+### Test suite
+
+All tests are in `Shared/Tests/` and run on both platforms:
+
+| Test class | Tests | What it covers |
+|---|---|---|
+| `ModelTests` | 18 | Transaction, Account, Budget, AppSettings model creation, computed properties, enum roundtrips, Category Codable |
+| `SyncServiceTests` | 42 | Payload encoding/decoding, merge logic (insert, update, conflict resolution, account linking, idempotency), service state machine |
+| `RecurringServiceTests` | 18 | Daily/weekly/monthly/quarterly/yearly recurrence generation, end date handling, parent ID linking, field copying |
+| `StatsServiceTests` | 10 | Monthly totals, category breakdown, savings rate, spending predictions, balance trends |
+| `ExportServiceTests` | 8 | CSV/JSON export formatting, import roundtrip, data persistence |
+| `PDFImportTests` | 8 | Bank statement text parsing, date/amount extraction, garbage line filtering |
+| `SmartCategoryTests` | 16 | Keyword matching, case insensitivity, merchant priority, fallback logic, edge cases |
+
+#### SyncService tests in detail
+
+The `SyncServiceTests.swift` file contains three test classes:
+
+- **`SyncPayloadCodableTests`** — verifies that `SyncPayload`, `SyncTransaction`, and `SyncAccount` encode and decode correctly through JSON, including nil optionals, large receipt data, and multi-item payloads.
+
+- **`SyncMergeTests`** — tests the core merge logic (`SyncService.mergePayload`) against an in-memory SwiftData store:
+  - Inserting new accounts and transactions
+  - Last-write-wins conflict resolution (newer remote wins, newer local wins, same timestamp keeps local)
+  - All transaction fields updated on conflict
+  - Account-to-transaction linking (new accounts, existing accounts, nil/non-existent account IDs)
+  - Mixed payloads (some new, some existing records)
+  - Empty payload handling
+  - Idempotency (merging same payload twice produces same result)
+  - Large payloads (100 transactions, 10 accounts)
+  - Recurring transaction field preservation
+
+- **`SyncServiceStateTests`** — tests the service lifecycle state machine:
+  - Initial idle state
+  - Advertiser starts in `.advertising`, browser starts in `.browsing`
+  - Stop resets to `.idle`
+  - Start while active is a no-op
+  - Start/stop cycling
+  - `SyncStatus` equatable conformance
 
 ---
 
