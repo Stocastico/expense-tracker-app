@@ -40,6 +40,7 @@ struct SyncAccount: Codable {
     let color: String
     let isDefault: Bool
     let createdAt: Date
+    let updatedAt: Date
 }
 
 // MARK: - SyncService
@@ -199,7 +200,8 @@ public final class SyncService: NSObject, ObservableObject {
                     icon: a.icon,
                     color: a.color,
                     isDefault: a.isDefault,
-                    createdAt: a.createdAt
+                    createdAt: a.createdAt,
+                    updatedAt: a.updatedAt
                 )
             },
             sentAt: Date()
@@ -243,12 +245,13 @@ public final class SyncService: NSObject, ObservableObject {
 
         for syncAccount in payload.accounts {
             if let existing = existingAccountMap[syncAccount.id] {
-                // Update if the incoming one is newer
-                if syncAccount.createdAt > existing.createdAt {
+                // Last-write-wins: update only if the incoming record was modified more recently.
+                if syncAccount.updatedAt > existing.updatedAt {
                     existing.name = syncAccount.name
                     existing.icon = syncAccount.icon
                     existing.color = syncAccount.color
                     existing.isDefault = syncAccount.isDefault
+                    existing.updatedAt = syncAccount.updatedAt
                 }
             } else {
                 let account = Account(
@@ -257,7 +260,8 @@ public final class SyncService: NSObject, ObservableObject {
                     icon: syncAccount.icon,
                     color: syncAccount.color,
                     isDefault: syncAccount.isDefault,
-                    createdAt: syncAccount.createdAt
+                    createdAt: syncAccount.createdAt,
+                    updatedAt: syncAccount.updatedAt
                 )
                 context.insert(account)
             }

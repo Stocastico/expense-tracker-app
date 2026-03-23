@@ -9,6 +9,7 @@ public final class Account {
     public var color: String
     public var isDefault: Bool
     public var createdAt: Date
+    public var updatedAt: Date
 
     @Relationship(deleteRule: .cascade, inverse: \Transaction.account)
     public var transactions: [Transaction]
@@ -19,7 +20,8 @@ public final class Account {
         icon: String = "💳",
         color: String = "#007AFF",
         isDefault: Bool = false,
-        createdAt: Date = Date()
+        createdAt: Date = Date(),
+        updatedAt: Date = Date()
     ) {
         self.id = id
         self.name = name
@@ -27,6 +29,7 @@ public final class Account {
         self.color = color
         self.isDefault = isDefault
         self.createdAt = createdAt
+        self.updatedAt = updatedAt
         self.transactions = []
     }
 }

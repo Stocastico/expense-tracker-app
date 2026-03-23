@@ -206,6 +206,7 @@ public class DataService {
     }
 
     public func updateAccount(_ account: Account) {
+        account.updatedAt = Date()
         saveContext()
     }
 
