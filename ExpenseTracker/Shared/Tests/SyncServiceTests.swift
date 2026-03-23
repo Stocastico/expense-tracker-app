@@ -315,9 +315,11 @@ final class SyncMergeTests: XCTestCase {
         icon: String = "💳",
         color: String = "#007AFF",
         isDefault: Bool = false,
-        createdAt: Date = Date()
+        createdAt: Date = Date(),
+        updatedAt: Date = Date()
     ) -> SyncAccount {
-        SyncAccount(id: id, name: name, icon: icon, color: color, isDefault: isDefault, createdAt: createdAt)
+        SyncAccount(id: id, name: name, icon: icon, color: color, isDefault: isDefault,
+                    createdAt: createdAt, updatedAt: updatedAt)
     }
 
     private func makeSyncTransaction(
@@ -393,13 +395,16 @@ final class SyncMergeTests: XCTestCase {
         let olderDate = Date(timeIntervalSince1970: 1000)
         let newerDate = Date(timeIntervalSince1970: 2000)
 
-        // Insert existing account with older createdAt
-        let existing = Account(id: sharedId, name: "Old Name", icon: "💳", color: "#000", isDefault: false, createdAt: olderDate)
+        // Insert existing account with older updatedAt
+        let existing = Account(id: sharedId, name: "Old Name", icon: "💳", color: "#000",
+                               isDefault: false, createdAt: olderDate, updatedAt: olderDate)
         context.insert(existing)
         try context.save()
 
-        // Merge with newer account data
-        let syncAccount = makeSyncAccount(id: sharedId, name: "New Name", icon: "🏦", color: "#FFF", isDefault: true, createdAt: newerDate)
+        // Merge with remote account that was modified more recently
+        let syncAccount = makeSyncAccount(id: sharedId, name: "New Name", icon: "🏦",
+                                          color: "#FFF", isDefault: true,
+                                          createdAt: olderDate, updatedAt: newerDate)
         let payload = makePayload(accounts: [syncAccount])
 
         try SyncService.mergePayload(payload, into: context)
@@ -417,13 +422,16 @@ final class SyncMergeTests: XCTestCase {
         let olderDate = Date(timeIntervalSince1970: 1000)
         let newerDate = Date(timeIntervalSince1970: 2000)
 
-        // Insert existing account with newer createdAt
-        let existing = Account(id: sharedId, name: "Local Name", icon: "🏠", color: "#ABC", isDefault: true, createdAt: newerDate)
+        // Insert existing account that was modified more recently locally
+        let existing = Account(id: sharedId, name: "Local Name", icon: "🏠", color: "#ABC",
+                               isDefault: true, createdAt: olderDate, updatedAt: newerDate)
         context.insert(existing)
         try context.save()
 
-        // Merge with older account data
-        let syncAccount = makeSyncAccount(id: sharedId, name: "Remote Name", icon: "📱", color: "#DEF", isDefault: false, createdAt: olderDate)
+        // Merge with older remote account data
+        let syncAccount = makeSyncAccount(id: sharedId, name: "Remote Name", icon: "📱",
+                                          color: "#DEF", isDefault: false,
+                                          createdAt: olderDate, updatedAt: olderDate)
         let payload = makePayload(accounts: [syncAccount])
 
         try SyncService.mergePayload(payload, into: context)
@@ -435,22 +443,52 @@ final class SyncMergeTests: XCTestCase {
         XCTAssertTrue(accounts[0].isDefault)
     }
 
-    func testMergeAccountWithSameTimestampKeepsLocal() throws {
+    // Regression: when same account exists on both devices (same createdAt),
+    // a rename on the remote device must still propagate via updatedAt.
+    func testMergeUpdatesExistingAccountWhenNameChangedWithSameCreatedAt() throws {
         let sharedId = UUID()
-        let sameDate = Date(timeIntervalSince1970: 1500)
+        let sharedCreated = Date(timeIntervalSince1970: 1_000)
+        let laterUpdated = Date(timeIntervalSince1970: 5_000)
 
-        let existing = Account(id: sharedId, name: "Local", createdAt: sameDate)
+        let existing = Account(
+            id: sharedId, name: "Personal", icon: "💳",
+            color: "#007AFF", isDefault: true,
+            createdAt: sharedCreated, updatedAt: sharedCreated
+        )
         context.insert(existing)
         try context.save()
 
-        let syncAccount = makeSyncAccount(id: sharedId, name: "Remote", createdAt: sameDate)
+        // Remote device renamed the account – same createdAt, but newer updatedAt
+        let syncAccount = makeSyncAccount(
+            id: sharedId, name: "Family Budget", icon: "🏠",
+            color: "#007AFF", isDefault: true,
+            createdAt: sharedCreated, updatedAt: laterUpdated
+        )
+        try SyncService.mergePayload(makePayload(accounts: [syncAccount]), into: context)
+
+        let accounts = try context.fetch(FetchDescriptor<Account>())
+        XCTAssertEqual(accounts.count, 1)
+        XCTAssertEqual(accounts[0].name, "Family Budget")
+        XCTAssertEqual(accounts[0].icon, "🏠")
+        XCTAssertEqual(accounts[0].updatedAt.timeIntervalSince1970, laterUpdated.timeIntervalSince1970, accuracy: 0.001)
+    }
+
+    func testMergeAccountWithSameUpdatedAtKeepsLocal() throws {
+        let sharedId = UUID()
+        let sameDate = Date(timeIntervalSince1970: 1500)
+
+        let existing = Account(id: sharedId, name: "Local", createdAt: sameDate, updatedAt: sameDate)
+        context.insert(existing)
+        try context.save()
+
+        let syncAccount = makeSyncAccount(id: sharedId, name: "Remote", createdAt: sameDate, updatedAt: sameDate)
         let payload = makePayload(accounts: [syncAccount])
 
         try SyncService.mergePayload(payload, into: context)
 
         let accounts = try context.fetch(FetchDescriptor<Account>())
         XCTAssertEqual(accounts.count, 1)
-        XCTAssertEqual(accounts[0].name, "Local") // Same timestamp, local wins
+        XCTAssertEqual(accounts[0].name, "Local") // Same updatedAt → local wins
     }
 
     func testMergeAccountPreservesIcon() throws {

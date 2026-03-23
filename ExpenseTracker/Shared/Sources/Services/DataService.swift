@@ -152,8 +152,7 @@ public class DataService {
             currency: "USD",
             darkMode: false,
             startOfMonth: 1,
-            defaultAccountId: nil,
-            customCategoriesData: nil
+            defaultAccountId: nil
         )
         modelContext.insert(defaults)
         saveContext()
@@ -206,6 +205,7 @@ public class DataService {
     }
 
     public func updateAccount(_ account: Account) {
+        account.updatedAt = Date()
         saveContext()
     }
 

@@ -209,6 +209,38 @@ final class ModelTests: XCTestCase {
         XCTAssertEqual(NSDecimalNumber(decimal: decimal).doubleValue, 123.45, accuracy: 0.001)
     }
 
+    // Regression: currentPeriodRange previously returned the *start* of the next
+    // period as `end` (exclusive upper bound). Callers filter with <= end, so a
+    // transaction timestamped at exactly midnight on the first day of the next
+    // period would incorrectly appear in the current budget.  The correct end is
+    // one second before the next period starts (inclusive upper bound).
+    func testBudgetMonthlyPeriodEndIsBeforeNextPeriodStart() {
+        let calendar = Calendar.current
+        let budget = Budget(categoryId: "food", amount: 500, period: .monthly)
+
+        let (start, end) = budget.currentPeriodRange()
+
+        // next period starts at the same clock-time one month later
+        let nextPeriodStart = calendar.date(byAdding: .month, value: 1, to: start)!
+
+        // BUG: with the old code end == nextPeriodStart, so this assertion fails
+        XCTAssertLessThan(end, nextPeriodStart,
+            "Monthly budget end must be strictly before next period start")
+    }
+
+    func testBudgetYearlyPeriodEndIsBeforeNextPeriodStart() {
+        let calendar = Calendar.current
+        let budget = Budget(categoryId: "other", amount: 10_000, period: .yearly)
+
+        let (start, end) = budget.currentPeriodRange()
+
+        let nextPeriodStart = calendar.date(byAdding: .year, value: 1, to: start)!
+
+        // BUG: with the old code end == nextPeriodStart, so this assertion fails
+        XCTAssertLessThan(end, nextPeriodStart,
+            "Yearly budget end must be strictly before next period start")
+    }
+
     // MARK: - TransactionType Enum Tests
 
     func testTransactionTypeRawValueRoundtrip() {
@@ -438,5 +470,34 @@ final class ModelTests: XCTestCase {
         XCTAssertFalse(settings.darkMode)
         XCTAssertEqual(settings.startOfMonth, 1)
         XCTAssertNil(settings.defaultAccountId)
+    }
+
+    // Regression: addCustomCategory's update path replaced the stored category
+    // verbatim without setting isCustom = true.  If the caller passed a category
+    // with isCustom = false (e.g. after decoding from external JSON), the flag
+    // was silently lost and the category stopped being treated as user-defined.
+    func testAddCustomCategoryUpdatePathSetsIsCustomTrue() {
+        let settings = AppSettings()
+
+        // Prime with a known custom category
+        let original = Category(
+            id: "my-cat", name: "Original", icon: "⭐",
+            color: "#AABBCC", type: .expense, isCustom: true
+        )
+        settings.addCustomCategory(original)
+        XCTAssertTrue(settings.customCategories[0].isCustom)
+
+        // Replace via addCustomCategory but pass isCustom = false
+        let replacement = Category(
+            id: "my-cat", name: "Replaced", icon: "🔄",
+            color: "#112233", type: .expense, isCustom: false
+        )
+        settings.addCustomCategory(replacement)
+
+        let stored = settings.customCategories.first(where: { $0.id == "my-cat" })
+        XCTAssertNotNil(stored)
+        XCTAssertEqual(stored?.name, "Replaced")
+        // BUG: this fails before the fix – the update path skips setting isCustom = true
+        XCTAssertTrue(stored?.isCustom ?? false, "Updated custom category must have isCustom = true")
     }
 }

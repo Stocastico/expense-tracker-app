@@ -62,11 +62,11 @@ extension AppSettings {
     /// Adds a custom category. If a category with the same ID exists, it is replaced.
     public func addCustomCategory(_ category: Category) {
         var categories = customCategories
+        var mutableCategory = category
+        mutableCategory.isCustom = true
         if let index = categories.firstIndex(where: { $0.id == category.id }) {
-            categories[index] = category
+            categories[index] = mutableCategory
         } else {
-            var mutableCategory = category
-            mutableCategory.isCustom = true
             categories.append(mutableCategory)
         }
         customCategories = categories
