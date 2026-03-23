@@ -435,6 +435,37 @@ final class SyncMergeTests: XCTestCase {
         XCTAssertTrue(accounts[0].isDefault)
     }
 
+    // Regression test: when the same account exists on both devices (same createdAt),
+    // a rename on the remote device must still propagate. The old code compared
+    // createdAt which is immutable, so the condition was always false and remote
+    // updates were silently dropped.
+    func testMergeUpdatesExistingAccountWhenNameChangedWithSameCreatedAt() throws {
+        let sharedId = UUID()
+        let sharedDate = Date(timeIntervalSince1970: 1_000)
+
+        let existing = Account(
+            id: sharedId, name: "Personal", icon: "💳",
+            color: "#007AFF", isDefault: true, createdAt: sharedDate
+        )
+        context.insert(existing)
+        try context.save()
+
+        // Remote device renamed the account – same createdAt, newer updatedAt
+        let syncAccount = makeSyncAccount(
+            id: sharedId, name: "Family Budget", icon: "🏠",
+            color: "#007AFF", isDefault: true,
+            createdAt: sharedDate
+        )
+        try SyncService.mergePayload(makePayload(accounts: [syncAccount]), into: context)
+
+        let accounts = try context.fetch(FetchDescriptor<Account>())
+        XCTAssertEqual(accounts.count, 1)
+        // BUG: this assertion fails with the old createdAt-based comparison because
+        // sharedDate == sharedDate so the update branch is never entered.
+        XCTAssertEqual(accounts[0].name, "Family Budget")
+        XCTAssertEqual(accounts[0].icon, "🏠")
+    }
+
     func testMergeAccountWithSameTimestampKeepsLocal() throws {
         let sharedId = UUID()
         let sameDate = Date(timeIntervalSince1970: 1500)
