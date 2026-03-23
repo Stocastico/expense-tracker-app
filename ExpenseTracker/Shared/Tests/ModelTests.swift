@@ -209,6 +209,38 @@ final class ModelTests: XCTestCase {
         XCTAssertEqual(NSDecimalNumber(decimal: decimal).doubleValue, 123.45, accuracy: 0.001)
     }
 
+    // Regression: currentPeriodRange previously returned the *start* of the next
+    // period as `end` (exclusive upper bound). Callers filter with <= end, so a
+    // transaction timestamped at exactly midnight on the first day of the next
+    // period would incorrectly appear in the current budget.  The correct end is
+    // one second before the next period starts (inclusive upper bound).
+    func testBudgetMonthlyPeriodEndIsBeforeNextPeriodStart() {
+        let calendar = Calendar.current
+        let budget = Budget(categoryId: "food", amount: 500, period: .monthly)
+
+        let (start, end) = budget.currentPeriodRange()
+
+        // next period starts at the same clock-time one month later
+        let nextPeriodStart = calendar.date(byAdding: .month, value: 1, to: start)!
+
+        // BUG: with the old code end == nextPeriodStart, so this assertion fails
+        XCTAssertLessThan(end, nextPeriodStart,
+            "Monthly budget end must be strictly before next period start")
+    }
+
+    func testBudgetYearlyPeriodEndIsBeforeNextPeriodStart() {
+        let calendar = Calendar.current
+        let budget = Budget(categoryId: "other", amount: 10_000, period: .yearly)
+
+        let (start, end) = budget.currentPeriodRange()
+
+        let nextPeriodStart = calendar.date(byAdding: .year, value: 1, to: start)!
+
+        // BUG: with the old code end == nextPeriodStart, so this assertion fails
+        XCTAssertLessThan(end, nextPeriodStart,
+            "Yearly budget end must be strictly before next period start")
+    }
+
     // MARK: - TransactionType Enum Tests
 
     func testTransactionTypeRawValueRoundtrip() {
