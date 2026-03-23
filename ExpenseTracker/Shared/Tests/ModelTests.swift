@@ -471,4 +471,33 @@ final class ModelTests: XCTestCase {
         XCTAssertEqual(settings.startOfMonth, 1)
         XCTAssertNil(settings.defaultAccountId)
     }
+
+    // Regression: addCustomCategory's update path replaced the stored category
+    // verbatim without setting isCustom = true.  If the caller passed a category
+    // with isCustom = false (e.g. after decoding from external JSON), the flag
+    // was silently lost and the category stopped being treated as user-defined.
+    func testAddCustomCategoryUpdatePathSetsIsCustomTrue() {
+        let settings = AppSettings()
+
+        // Prime with a known custom category
+        let original = Category(
+            id: "my-cat", name: "Original", icon: "⭐",
+            color: "#AABBCC", type: .expense, isCustom: true
+        )
+        settings.addCustomCategory(original)
+        XCTAssertTrue(settings.customCategories[0].isCustom)
+
+        // Replace via addCustomCategory but pass isCustom = false
+        let replacement = Category(
+            id: "my-cat", name: "Replaced", icon: "🔄",
+            color: "#112233", type: .expense, isCustom: false
+        )
+        settings.addCustomCategory(replacement)
+
+        let stored = settings.customCategories.first(where: { $0.id == "my-cat" })
+        XCTAssertNotNil(stored)
+        XCTAssertEqual(stored?.name, "Replaced")
+        // BUG: this fails before the fix – the update path skips setting isCustom = true
+        XCTAssertTrue(stored?.isCustom ?? false, "Updated custom category must have isCustom = true")
+    }
 }
