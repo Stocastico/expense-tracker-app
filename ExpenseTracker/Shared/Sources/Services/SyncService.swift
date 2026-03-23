@@ -88,9 +88,6 @@ public final class SyncService: NSObject, ObservableObject {
     private var browser: MCNearbyServiceBrowser?
     private var modelContext: ModelContext?
 
-    // Buffer to accumulate received data chunks
-    private var receivedDataBuffer = Data()
-
     // MARK: - Init
 
     public init(role: Role, displayName: String? = nil) {
