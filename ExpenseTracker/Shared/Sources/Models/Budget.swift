@@ -73,7 +73,10 @@ extension Budget {
                 adjustedStart = start
             }
 
-            let end = calendar.date(byAdding: .month, value: 1, to: adjustedStart) ?? now
+            // Use one second before the next period starts so that the range is
+            // inclusive and callers can safely compare with <=.
+            let nextStart = calendar.date(byAdding: .month, value: 1, to: adjustedStart) ?? now
+            let end = calendar.date(byAdding: .second, value: -1, to: nextStart) ?? now
             return (adjustedStart, end)
 
         case .yearly:
@@ -84,7 +87,8 @@ extension Budget {
             components.minute = 0
             components.second = 0
             let start = calendar.date(from: components) ?? now
-            let end = calendar.date(byAdding: .year, value: 1, to: start) ?? now
+            let nextStart = calendar.date(byAdding: .year, value: 1, to: start) ?? now
+            let end = calendar.date(byAdding: .second, value: -1, to: nextStart) ?? now
             return (start, end)
         }
     }
