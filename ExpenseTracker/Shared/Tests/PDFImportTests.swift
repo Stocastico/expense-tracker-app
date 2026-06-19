@@ -22,16 +22,16 @@ final class PDFImportTests: XCTestCase {
 
         // First transaction
         XCTAssertNotNil(transactions[0].date)
-        XCTAssertEqual(transactions[0].amount, 42.50, accuracy: 0.01)
+        XCTAssertEqual(transactions[0].amount!, 42.50, accuracy: 0.01)
         XCTAssertTrue(transactions[0].isExpense)
         XCTAssertTrue(transactions[0].description.contains("AMAZON"))
 
         // Second transaction (income)
-        XCTAssertEqual(transactions[1].amount, 3000.00, accuracy: 0.01)
+        XCTAssertEqual(transactions[1].amount!, 3000.00, accuracy: 0.01)
         XCTAssertFalse(transactions[1].isExpense)
 
         // Third transaction
-        XCTAssertEqual(transactions[2].amount, 85.30, accuracy: 0.01)
+        XCTAssertEqual(transactions[2].amount!, 85.30, accuracy: 0.01)
         XCTAssertTrue(transactions[2].isExpense)
     }
 
@@ -180,7 +180,7 @@ final class PDFImportTests: XCTestCase {
 
         let t = transactions[0]
         XCTAssertNotNil(t.date)
-        XCTAssertEqual(t.amount, 42.50, accuracy: 0.01)
+        XCTAssertEqual(t.amount!, 42.50, accuracy: 0.01)
         XCTAssertTrue(t.isExpense)
         XCTAssertTrue(t.description.uppercased().contains("AMAZON"))
     }
@@ -190,7 +190,7 @@ final class PDFImportTests: XCTestCase {
         let transactions = PDFImportService.parseText(text)
 
         XCTAssertEqual(transactions.count, 1)
-        XCTAssertEqual(transactions[0].amount, 4500.00, accuracy: 0.01)
+        XCTAssertEqual(transactions[0].amount!, 4500.00, accuracy: 0.01)
         XCTAssertFalse(transactions[0].isExpense)
     }
 
@@ -257,7 +257,7 @@ final class PDFImportTests: XCTestCase {
 
         // Should only parse the two valid transaction lines
         XCTAssertEqual(transactions.count, 2)
-        XCTAssertEqual(transactions[0].amount, 4.50, accuracy: 0.01)
-        XCTAssertEqual(transactions[1].amount, 2500.00, accuracy: 0.01)
+        XCTAssertEqual(transactions[0].amount!, 4.50, accuracy: 0.01)
+        XCTAssertEqual(transactions[1].amount!, 2500.00, accuracy: 0.01)
     }
 }
