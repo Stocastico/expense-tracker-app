@@ -13,12 +13,13 @@ struct ExpenseTrackerApp: App {
                     Transaction.self,
                     Account.self,
                     Budget.self,
-                    AppSettings.self
+                    AppSettings.self,
+                    CategoryRule.self
                 ]),
                 cloudKitDatabase: .none
             )
             modelContainer = try ModelContainer(
-                for: Transaction.self, Account.self, Budget.self, AppSettings.self,
+                for: Transaction.self, Account.self, Budget.self, AppSettings.self, CategoryRule.self,
                 configurations: configuration
             )
         } catch {
