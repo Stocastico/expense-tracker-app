@@ -1,7 +1,6 @@
 import XCTest
 import Foundation
 import SwiftData
-@testable import ExpenseTracker
 
 final class ExportServiceTests: XCTestCase {
 

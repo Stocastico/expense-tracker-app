@@ -12,34 +12,19 @@ settings:
     SWIFT_VERSION: "5.9"
     ENABLE_USER_SCRIPT_SANDBOXING: false
 
+# The shared sources are compiled directly into the app (and test) target
+# rather than into a separate framework. This keeps the model types
+# (Transaction, Category, …) local to the module, so they take precedence
+# over same-named system types like SwiftUI.Transaction instead of being
+# ambiguous across a module boundary.
 targets:
-  ExpenseTrackerShared:
-    type: framework
-    platform: macOS
-    sources:
-      - path: Shared/Sources
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.expensetracker.shared
-        PRODUCT_NAME: ExpenseTracker
-        PRODUCT_MODULE_NAME: ExpenseTracker
-        ENABLE_TESTABILITY: true
-        INFOPLIST_GENERATION: true
-        MARKETING_VERSION: "1.0.0"
-        CURRENT_PROJECT_VERSION: 1
-        SWIFT_EMIT_LOC_STRINGS: true
-    scheme:
-      testTargets:
-        - ExpenseTrackerTests
-
   ExpenseTrackerMac:
     type: application
     platform: macOS
     deploymentTarget: "15.0"
     sources:
       - path: MacApp
-    dependencies:
-      - target: ExpenseTrackerShared
+      - path: Shared/Sources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.expensetracker.mac
@@ -60,9 +45,8 @@ targets:
     type: bundle.unit-test
     platform: macOS
     sources:
+      - path: Shared/Sources
       - path: Shared/Tests
-    dependencies:
-      - target: ExpenseTrackerShared
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.expensetracker.tests
@@ -75,7 +59,7 @@ schemes:
     build:
       targets:
         ExpenseTrackerMac: all
-        ExpenseTrackerShared: all
+        ExpenseTrackerTests: [test]
     run:
       config: Debug
     test:

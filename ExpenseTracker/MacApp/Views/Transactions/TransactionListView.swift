@@ -1,5 +1,4 @@
 import SwiftUI
-import ExpenseTracker
 import SwiftData
 
 struct TransactionListView: View {

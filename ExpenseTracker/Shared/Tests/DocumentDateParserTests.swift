@@ -1,6 +1,5 @@
 import XCTest
 import Foundation
-@testable import ExpenseTracker
 
 /// Tests for the locale-aware document date parser.
 ///

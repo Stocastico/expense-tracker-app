@@ -1,5 +1,4 @@
 import SwiftUI
-import ExpenseTracker
 
 struct TransactionRowView: View {
     let transaction: Transaction

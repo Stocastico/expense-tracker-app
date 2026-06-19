@@ -1,5 +1,4 @@
 import SwiftUI
-import ExpenseTracker
 import Charts
 
 struct CategoryPieChart: View {

@@ -1,5 +1,4 @@
 import SwiftUI
-import ExpenseTracker
 import Charts
 
 struct MonthlyBarChart: View {
