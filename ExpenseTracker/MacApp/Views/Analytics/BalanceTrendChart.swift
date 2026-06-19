@@ -1,4 +1,5 @@
 import SwiftUI
+import ExpenseTracker
 import Charts
 
 struct BalanceTrendChart: View {

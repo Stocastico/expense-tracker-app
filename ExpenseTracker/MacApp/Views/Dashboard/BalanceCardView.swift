@@ -1,4 +1,5 @@
 import SwiftUI
+import ExpenseTracker
 
 struct BalanceCardView: View {
     let netBalance: Double

@@ -1,4 +1,5 @@
 import SwiftUI
+import ExpenseTracker
 import SwiftData
 
 enum SidebarItem: String, CaseIterable, Identifiable {

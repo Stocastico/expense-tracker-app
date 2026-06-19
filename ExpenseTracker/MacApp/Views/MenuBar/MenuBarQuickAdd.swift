@@ -1,4 +1,5 @@
 import SwiftUI
+import ExpenseTracker
 import SwiftData
 
 /// Compact quick-add form shown in the menu bar popover, for jotting down a

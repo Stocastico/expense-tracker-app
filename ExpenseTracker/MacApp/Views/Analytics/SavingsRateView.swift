@@ -1,4 +1,5 @@
 import SwiftUI
+import ExpenseTracker
 
 struct SavingsRateView: View {
     let rate: Double

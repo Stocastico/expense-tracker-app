@@ -1,7 +1,7 @@
 import SwiftUI
 
 extension Color {
-    init(hex: String) {
+    public init(hex: String) {
         let sanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
         let hexString = sanitized.hasPrefix("#") ? String(sanitized.dropFirst()) : sanitized
 

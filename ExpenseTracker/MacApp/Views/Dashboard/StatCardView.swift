@@ -1,4 +1,5 @@
 import SwiftUI
+import ExpenseTracker
 
 struct StatCardView: View {
     let title: String

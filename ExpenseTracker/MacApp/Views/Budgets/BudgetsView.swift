@@ -1,4 +1,5 @@
 import SwiftUI
+import ExpenseTracker
 import SwiftData
 
 struct BudgetsView: View {
