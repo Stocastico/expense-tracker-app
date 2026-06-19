@@ -4,7 +4,6 @@ import SwiftData
 @main
 struct ExpenseTrackerApp: App {
     let modelContainer: ModelContainer
-    @StateObject private var syncService = SyncService(role: .advertiser)
 
     init() {
         do {
@@ -31,11 +30,8 @@ struct ExpenseTrackerApp: App {
         WindowGroup {
             ContentView()
                 .modelContainer(modelContainer)
-                .environmentObject(syncService)
                 .onAppear {
                     createDefaultAccountsIfNeeded()
-                    syncService.setModelContext(modelContainer.mainContext)
-                    syncService.start()
                 }
         }
         .windowStyle(.titleBar)
