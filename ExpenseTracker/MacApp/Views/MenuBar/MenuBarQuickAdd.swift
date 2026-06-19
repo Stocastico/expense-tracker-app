@@ -106,6 +106,13 @@ struct MenuBarQuickAdd: View {
     private func updateCategorySuggestion() {
         let text = descriptionText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else { return }
+        // Learned rules win over keyword heuristics.
+        if let learned = CategoryRuleService(modelContext: modelContext)
+            .suggestedCategoryId(merchant: nil, description: text),
+           availableCategories.contains(where: { $0.id == learned }) {
+            categoryId = learned
+            return
+        }
         let detected = DefaultCategories.detectCategory(from: text, transactionType: transactionType)
         if detected.id != "other", availableCategories.contains(where: { $0.id == detected.id }) {
             categoryId = detected.id
@@ -125,6 +132,13 @@ struct MenuBarQuickAdd: View {
             account: selectedAccount
         )
         DataService(modelContext: modelContext).addTransaction(transaction)
+
+        // Remember this name -> category for future auto-categorisation.
+        CategoryRuleService(modelContext: modelContext).learn(
+            merchant: nil,
+            description: descriptionText.trimmingCharacters(in: .whitespaces),
+            categoryId: categoryId
+        )
 
         // Reset for the next quick entry.
         amount = ""

@@ -356,6 +356,13 @@ struct TransactionFormView: View {
             suggestedCategoryId = nil
             return
         }
+        // Learned rules (a category the user previously assigned to this name)
+        // take priority over keyword heuristics.
+        if let learned = CategoryRuleService(modelContext: modelContext)
+            .suggestedCategoryId(merchant: merchant.isEmpty ? nil : merchant, description: descriptionText) {
+            suggestedCategoryId = learned
+            return
+        }
         let detected = DefaultCategories.detectCategory(from: text, transactionType: transactionType)
         if detected.id != "other" {
             suggestedCategoryId = detected.id
@@ -418,6 +425,14 @@ struct TransactionFormView: View {
                 }
             }
         }
+
+        // Remember the chosen category for this merchant/description so future
+        // transactions with the same name are auto-categorised.
+        CategoryRuleService(modelContext: modelContext).learn(
+            merchant: merchant.isEmpty ? nil : merchant,
+            description: descriptionText.trimmingCharacters(in: .whitespaces),
+            categoryId: categoryId
+        )
 
         dismiss()
     }
