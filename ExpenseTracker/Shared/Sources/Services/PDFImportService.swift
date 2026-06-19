@@ -41,6 +41,19 @@ public struct PDFImportService {
         return parseText(fullText)
     }
 
+    /// Extracts the raw concatenated text of a PDF, for the locale-aware
+    /// `StatementParser`.
+    public static func extractText(from url: URL) -> String {
+        guard let document = PDFDocument(url: url) else { return "" }
+        var fullText = ""
+        for pageIndex in 0..<document.pageCount {
+            if let page = document.page(at: pageIndex), let pageText = page.string {
+                fullText += pageText + "\n"
+            }
+        }
+        return fullText
+    }
+
     // MARK: - Parse Text into Transactions
 
     public static func parseText(_ text: String) -> [ParsedTransaction] {

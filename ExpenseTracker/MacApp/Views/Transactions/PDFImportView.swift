@@ -198,11 +198,16 @@ struct PDFImportView: View {
                 .width(100)
 
                 TableColumn("Category") { transaction in
-                    let cat = DefaultCategories.category(withId: transaction.categoryId)
-                    Text("\(cat.icon) \(cat.name)")
-                        .font(.caption)
+                    if let index = parsedTransactions.firstIndex(where: { $0.id == transaction.id }) {
+                        Picker("", selection: $parsedTransactions[index].categoryId) {
+                            ForEach(categories(forExpense: parsedTransactions[index].isExpense), id: \.id) { cat in
+                                Text("\(cat.icon) \(cat.name)").tag(cat.id)
+                            }
+                        }
+                        .labelsHidden()
+                    }
                 }
-                .width(min: 80, ideal: 120)
+                .width(min: 120, ideal: 160)
             } rows: {
                 ForEach(parsedTransactions) { transaction in
                     TableRow(transaction)
@@ -256,6 +261,13 @@ struct PDFImportView: View {
         }
     }
 
+    // MARK: - Categories
+
+    /// Candidate categories for the picker, by transaction type.
+    private func categories(forExpense isExpense: Bool) -> [Category] {
+        isExpense ? DefaultCategories.expenseCategories : DefaultCategories.incomeCategories
+    }
+
     // MARK: - Actions
 
     private func openPDFPicker() {
@@ -269,22 +281,28 @@ struct PDFImportView: View {
 
         isLoading = true
         DispatchQueue.global(qos: .userInitiated).async {
-            let parsed = PDFImportService.extractTransactions(from: url)
-
-            let importable = parsed.map { p in
-                let type: TransactionType = p.isExpense ? .expense : .income
-                let detected = DefaultCategories.detectCategory(from: p.description, transactionType: type)
-                return ImportableTransaction(
-                    date: p.date ?? Date(),
-                    descriptionText: p.description,
-                    amountText: p.amount.map { String(format: "%.2f", $0) } ?? "",
-                    isExpense: p.isExpense,
-                    categoryId: detected.id,
-                    isSelected: true
-                )
-            }
+            // Locale-aware extraction (Spanish-first) via StatementParser.
+            let text = PDFImportService.extractText(from: url)
+            let entries = StatementParser.parse(text)
 
             DispatchQueue.main.async {
+                // Learned rules first, then keyword heuristics, for the initial
+                // category of each row.
+                let ruleService = CategoryRuleService(modelContext: modelContext)
+                let importable = entries.map { entry -> ImportableTransaction in
+                    let type: TransactionType = entry.isExpense ? .expense : .income
+                    let categoryId = ruleService.suggestedCategoryId(merchant: nil, description: entry.description)
+                        ?? DefaultCategories.detectCategory(from: entry.description, transactionType: type).id
+                    return ImportableTransaction(
+                        date: entry.date ?? Date(),
+                        descriptionText: entry.description,
+                        amountText: String(format: "%.2f", NSDecimalNumber(decimal: entry.amount).doubleValue),
+                        isExpense: entry.isExpense,
+                        categoryId: categoryId,
+                        isSelected: true
+                    )
+                }
+
                 parsedTransactions = importable
                 isLoading = false
                 if !importable.isEmpty {
@@ -297,6 +315,7 @@ struct PDFImportView: View {
 
     private func importSelectedTransactions() {
         let dataService = DataService(modelContext: modelContext)
+        let ruleService = CategoryRuleService(modelContext: modelContext)
         let selected = parsedTransactions.filter(\.isSelected)
 
         for item in selected {
@@ -312,6 +331,9 @@ struct PDFImportView: View {
                 account: selectedAccount
             )
             dataService.addTransaction(transaction)
+
+            // Remember the (possibly user-corrected) category for this name.
+            ruleService.learn(merchant: nil, description: item.descriptionText, categoryId: item.categoryId)
         }
 
         importedCount = selected.count
