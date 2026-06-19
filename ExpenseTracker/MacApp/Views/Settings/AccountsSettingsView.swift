@@ -202,5 +202,3 @@ private struct AccountFormSheet: View {
         dismiss()
     }
 }
-
-extension Account: @retroactive Identifiable {}
