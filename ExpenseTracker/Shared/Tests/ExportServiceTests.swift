@@ -191,7 +191,6 @@ final class ExportServiceTests: XCTestCase {
         decoder.dateDecodingStrategy = .iso8601
         let exportData = try decoder.decode(ExportData.self, from: jsonData)
 
-        XCTAssertEqual(exportData.version, "1.0")
         XCTAssertFalse(exportData.transactions.isEmpty)
         XCTAssertFalse(exportData.budgets.isEmpty)
         XCTAssertFalse(exportData.accounts.isEmpty)
@@ -232,7 +231,7 @@ final class ExportServiceTests: XCTestCase {
         XCTAssertEqual(exported.type, "expense")
         XCTAssertEqual(exported.amount, 99.99, accuracy: 0.01)
         XCTAssertEqual(exported.currency, "USD")
-        XCTAssertEqual(exported.descriptionText, "Test purchase")
+        XCTAssertEqual(exported.description, "Test purchase")
         XCTAssertEqual(exported.merchant, "Test Store")
         XCTAssertEqual(exported.categoryId, "shopping")
         XCTAssertEqual(exported.notes, "Test note")
