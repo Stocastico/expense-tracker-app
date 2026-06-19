@@ -41,13 +41,22 @@ understanding US notation.
 ## Roadmap
 
 1. ✅ Archive iOS app + sync; macOS-only project; CI on a macOS runner.
-2. 🚧 Locale-aware parsing layer (`MoneyParser` done; date parser next).
-3. ⬜ Structured extraction from statements (lines → transactions).
-4. ⬜ Auto-categorisation engine via **Apple Foundation Models** (on-device,
-   private, free). Gated behind `@available(macOS 26, *)` with a heuristic
-   fallback so the app still runs on older macOS and in CI.
+2. ✅ Locale-aware parsing layer (`MoneyParser`, `DocumentDateParser`).
+3. ✅ Structured extraction from statements (`StatementParser`, Spanish-first).
+4. ✅ Categorisation engine abstraction: heuristic engine + learned rules
+   (`CategoryRule`), with an on-device **Apple Foundation Models** engine
+   behind `#if canImport(FoundationModels)` + `@available(macOS 26, *)` so the
+   app still builds on Xcode 16 / older macOS and in CI.
 5. ⬜ Image pipeline (receipts/invoices) reusing the same engine.
-6. ⬜ Unified review UI for imports.
+6. ✅ PDF import review: editable category per row; corrections are learned.
+
+### Learned categorisation
+
+When you assign a category to a transaction (manual form, menu-bar quick-add,
+or the import review), the app remembers `merchant/description → category`
+(normalised by `MerchantKey`, ignoring card/branch numbers) and auto-applies
+it to future transactions with the same name. Learned rules take precedence
+over keyword heuristics and the on-device model.
 
 ---
 
@@ -74,10 +83,12 @@ ExpenseTracker/
 ├── Shared/
 │   ├── Sources/
 │   │   ├── Models/              # SwiftData @Model classes
-│   │   ├── Services/            # StatsService, DataService, RecurringService,
-│   │   │                        # ExportService, PDFImportService, OCRService,
-│   │   │                        # SmartCategoryService
-│   │   ├── Parsing/             # MoneyParser (locale-aware money), …
+│   │   ├── Services/            # Stats, Data, Recurring, Export, PDFImport,
+│   │   │                        # OCR, SmartCategory, CategoryRule(+Service),
+│   │   │                        # CategorizationEngine, CategoryResolver,
+│   │   │                        # FoundationModelsCategorizationEngine (gated)
+│   │   ├── Parsing/             # MoneyParser, DocumentDateParser,
+│   │   │                        # StatementParser, MerchantKey
 │   │   ├── Extensions/          # Date, Currency, Color helpers
 │   │   └── Defaults/            # Default categories
 │   └── Tests/                   # XCTest unit tests
@@ -120,6 +131,11 @@ CI runs the same on a macOS runner for every push
 |---|---|
 | `ModelTests` | Model creation, computed properties, enum roundtrips, Category Codable |
 | `MoneyParserTests` | European/US amount parsing, separators, signs, currency symbols |
+| `DocumentDateParserTests` | Day-first/ISO dates, ES/IT/EU/EN month names, invalid dates |
+| `StatementParserTests` | Statement lines → transactions, header/balance skipping, income keywords |
+| `MerchantKeyTests` | Merchant normalisation (diacritics, digits, whitespace) |
+| `CategoryRuleServiceTests` | Learn/lookup/upsert of learned category rules |
+| `CategorizationEngineTests` | Heuristic engine + resolver precedence (learned → engine) |
 | `RecurringServiceTests` | Recurrence generation, end dates, parent linking |
 | `StatsServiceTests` | Monthly totals, category breakdown, savings rate, predictions |
 | `ExportServiceTests` | CSV/JSON export & import roundtrip |

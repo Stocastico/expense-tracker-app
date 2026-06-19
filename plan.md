@@ -28,28 +28,33 @@ The iOS companion app and MultipeerConnectivity sync are archived on
    - macOS-only `project.yml`; add macOS CI.
    - Fix the missing `MenuBarQuickAdd` (Mac target did not compile).
 
-2. **Locale-aware parsing** 🚧
+2. **Locale-aware parsing** ✅
    - `MoneyParser` (European/US amounts) ✅
-   - `DocumentDateParser` (day-first European + Spanish/Italian/English month
-     names + ISO).
+   - `DocumentDateParser` (day-first European + Spanish/Italian/Basque/English
+     month names + ISO) ✅
 
-3. **Statement extraction**
-   - Cluster OCR/PDF text into structured `ParsedTransaction`s (date, amount,
-     merchant/description, sign) for real Spanish statement layouts.
-   - Anonymised statement fixtures as test data.
+3. **Statement extraction** ✅
+   - `StatementParser`: statement text → structured `StatementEntry`s (date,
+     amount, expense/income, description), skipping headers/balances, with
+     Spanish income-keyword detection. Synthetic fixtures as test data; to be
+     tuned against a real statement.
 
-4. **Auto-categorisation engine**
-   - `CategorizationEngine` protocol.
-   - `HeuristicCategorizationEngine` (testable, keyword/merchant based).
-   - `FoundationModelsCategorizationEngine` (`@available(macOS 26, *)`),
-     guided generation into a category enum.
+4. **Auto-categorisation engine** ✅
+   - Learned rules: `CategoryRule` + `CategoryRuleService` (normalised by
+     `MerchantKey`), wired into manual form, quick-add and import review.
+   - `CategorizationEngine` protocol + `HeuristicCategorizationEngine` +
+     `CategoryResolver` (learned → engine).
+   - `FoundationModelsCategorizationEngine` (`@available(macOS 26, *)`,
+     `#if canImport(FoundationModels)`) — needs validation on a macOS 26
+     toolchain.
 
-5. **Image pipeline**
-   - Receipts/invoices via Vision OCR → same extraction + categorisation.
+5. **Image pipeline** ⬜
+   - Receipts/invoices via Vision OCR → `StatementParser`/resolver reuse.
 
-6. **Review UI & polish**
-   - Unified import-review screen; wire engine into the manual form's
-     suggestion; refresh analytics/filters as needed.
+6. **Review UI & polish** ✅ (import) / ⬜ (broader polish)
+   - Import review: editable category per row + learning on import. ✅
+   - Wire the resolver/FM engine into the manual form suggestion; refresh
+     analytics/filters as needed. ⬜
 
 ## Data model (unchanged core)
 
