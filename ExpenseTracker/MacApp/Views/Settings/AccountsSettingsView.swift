@@ -32,7 +32,7 @@ struct AccountsSettingsView: View {
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Color.accentColor.opacity(0.15))
-                            .foregroundStyle(.accentColor)
+                            .foregroundStyle(Color.accentColor)
                             .clipShape(Capsule())
                     }
 
