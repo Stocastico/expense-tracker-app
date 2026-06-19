@@ -14,7 +14,9 @@ public struct CategoryResolver {
     }
 
     public func resolve(merchant: String?, description: String, candidates: [Category]) async -> String? {
-        // Stub: implementation follows in the green commit.
-        return nil
+        if let learned = ruleService.suggestedCategoryId(merchant: merchant, description: description) {
+            return learned
+        }
+        return await engine.suggestCategoryId(merchant: merchant, description: description, candidates: candidates)
     }
 }

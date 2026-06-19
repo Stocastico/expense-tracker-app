@@ -15,7 +15,9 @@ public struct HeuristicCategorizationEngine: CategorizationEngine {
     public init() {}
 
     public func suggestCategoryId(merchant: String?, description: String, candidates: [Category]) async -> String? {
-        // Stub: implementation follows in the green commit.
-        return nil
+        guard let id = SmartCategoryService.suggestCategory(for: description, merchant: merchant) else {
+            return nil
+        }
+        return candidates.contains(where: { $0.id == id }) ? id : nil
     }
 }
