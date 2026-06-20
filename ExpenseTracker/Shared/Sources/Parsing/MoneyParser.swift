@@ -34,6 +34,13 @@ public enum MoneyParser {
 
     // MARK: - Token extraction
 
+    /// Parses every monetary amount (two-decimal tokens) found in `text`, in
+    /// order. Used by receipt parsing to inspect all amounts on a line.
+    public static func allAmounts(in text: String) -> [Decimal] {
+        // Stub: implementation follows in the green commit.
+        return []
+    }
+
     /// Finds the numeric token (digits plus `.`/`,` separators) containing the
     /// most digits — i.e. the most amount-like run in the string.
     private static func bestNumberRange(in text: String) -> Range<String.Index>? {
