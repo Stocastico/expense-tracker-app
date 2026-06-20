@@ -14,6 +14,7 @@ struct PDFImportView: View {
     @State private var selectedAccount: Account?
     @State private var importedCount = 0
     @State private var isLoading = false
+    @State private var showNoTransactions = false
 
     enum ImportStep {
         case pickFile
@@ -52,6 +53,11 @@ struct PDFImportView: View {
             case .done:
                 doneStep
             }
+        }
+        .alert("No transactions found", isPresented: $showNoTransactions) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Couldn't read any transactions from this PDF. Make sure it's a text-based statement (not a scanned image); for scanned receipts, use Scan Receipt instead.")
         }
     }
 
@@ -305,7 +311,9 @@ struct PDFImportView: View {
 
                 parsedTransactions = importable
                 isLoading = false
-                if !importable.isEmpty {
+                if importable.isEmpty {
+                    showNoTransactions = true
+                } else {
                     currentStep = .review
                     selectedAccount = accounts.first(where: { $0.isDefault }) ?? accounts.first
                 }
