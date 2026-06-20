@@ -102,13 +102,18 @@ In the transaction form, **Scan Receipt** runs on-device OCR (Vision) and
 
 ### Trying it with your own statements
 
-The parsers default to European/Spanish notation and are covered by synthetic
-fixtures; **real layouts vary a lot**. If extraction looks off:
+The parsers default to European/Spanish notation and are tuned against real
+Kutxabank exports (card PDF, account CSV); **real layouts vary a lot**. If
+extraction looks off:
 
-- confirm the PDF is text-based (select text in Preview — if you can't, it's a
-  scan);
-- share an **anonymised** few lines (copy as text) so the `StatementParser`
-  fixtures can be tuned to your bank's format;
+- for a **PDF**, confirm it's text-based (select text in Preview — if you
+  can't, it's a scan);
+- for an **account CSV**, a `;`-delimited file with comma decimals and a
+  `fecha;concepto;…;importe;saldo` header is expected (tab/comma delimiters
+  also work); CSV is the most deterministic path since the sign comes straight
+  from the `importe` column;
+- share an **anonymised** few lines (copy as text) so the `StatementParser` /
+  `StatementCSVParser` fixtures can be tuned to your bank's format;
 - the on-device LLM categoriser (`FoundationModelsCategorizationEngine`) needs
   macOS 26 + Apple Silicon and Xcode 17 to build, and is otherwise skipped in
   favour of learned rules + heuristics.
