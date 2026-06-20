@@ -61,4 +61,35 @@ final class CategoryRuleServiceTests: XCTestCase {
     func testLearnReturnsNilWhenNoUsableKey() {
         XCTAssertNil(service.learn(merchant: nil, description: "   ", categoryId: "groceries"))
     }
+
+    func testAllRulesSortedByHitCountDescending() {
+        service.learn(merchant: "Mercadona", description: "", categoryId: "groceries") // hit 1
+        service.learn(merchant: "Spotify", description: "", categoryId: "subscriptions") // hit 1
+        service.learn(merchant: "Spotify", description: "", categoryId: "subscriptions") // hit 2
+
+        let rules = service.allRules()
+        XCTAssertEqual(rules.count, 2)
+        XCTAssertEqual(rules.first?.key, "spotify")
+        XCTAssertEqual(rules.first?.hitCount, 2)
+    }
+
+    func testDeleteRemovesRule() {
+        service.learn(merchant: "Spotify", description: "", categoryId: "subscriptions")
+        let rule = service.rule(forKey: "spotify")
+        XCTAssertNotNil(rule)
+
+        service.delete(rule!)
+
+        XCTAssertTrue(service.allRules().isEmpty)
+        XCTAssertNil(service.suggestedCategoryId(merchant: "Spotify", description: ""))
+    }
+
+    func testSetCategoryUpdatesRule() {
+        service.learn(merchant: "Amazon", description: "", categoryId: "shopping")
+        let rule = service.rule(forKey: "amazon")!
+
+        service.setCategory(rule, to: "subscriptions")
+
+        XCTAssertEqual(service.suggestedCategoryId(merchant: "Amazon", description: ""), "subscriptions")
+    }
 }

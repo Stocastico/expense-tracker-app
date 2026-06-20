@@ -51,4 +51,25 @@ public struct CategoryRuleService {
         descriptor.fetchLimit = 1
         return try? modelContext.fetch(descriptor).first
     }
+
+    /// All learned rules, most-reinforced first.
+    public func allRules() -> [CategoryRule] {
+        let descriptor = FetchDescriptor<CategoryRule>(
+            sortBy: [SortDescriptor(\.hitCount, order: .reverse), SortDescriptor(\.key)]
+        )
+        return (try? modelContext.fetch(descriptor)) ?? []
+    }
+
+    /// Deletes a learned rule.
+    public func delete(_ rule: CategoryRule) {
+        modelContext.delete(rule)
+        try? modelContext.save()
+    }
+
+    /// Changes the category a learned rule maps to.
+    public func setCategory(_ rule: CategoryRule, to categoryId: String) {
+        rule.categoryId = categoryId
+        rule.updatedAt = Date()
+        try? modelContext.save()
+    }
 }
