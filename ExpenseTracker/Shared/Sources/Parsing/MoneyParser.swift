@@ -34,11 +34,18 @@ public enum MoneyParser {
 
     // MARK: - Token extraction
 
+    private static let amountTokenRegex = try! NSRegularExpression(
+        pattern: "[-+(]?\\s*€?\\s*(?:\\d{1,3}(?:[.,]\\d{3})+|\\d+)[.,]\\d{2}\\s*€?\\)?\\s*-?"
+    )
+
     /// Parses every monetary amount (two-decimal tokens) found in `text`, in
     /// order. Used by receipt parsing to inspect all amounts on a line.
     public static func allAmounts(in text: String) -> [Decimal] {
-        // Stub: implementation follows in the green commit.
-        return []
+        let range = NSRange(text.startIndex..., in: text)
+        return amountTokenRegex.matches(in: text, range: range).compactMap { match in
+            guard let r = Range(match.range, in: text) else { return nil }
+            return parse(String(text[r]))
+        }
     }
 
     /// Finds the numeric token (digits plus `.`/`,` separators) containing the

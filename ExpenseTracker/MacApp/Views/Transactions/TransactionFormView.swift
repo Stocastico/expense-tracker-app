@@ -482,25 +482,21 @@ struct TransactionFormView: View {
         Task {
             do {
                 let text = try await OCRService.recognizeText(from: data)
-                if let result = OCRService.extractExpenseFromText(text) {
-                    await MainActor.run {
-                        if let ocrAmount = result.amount {
-                            amount = String(format: "%.2f", ocrAmount)
-                        }
-                        if let ocrMerchant = result.merchant {
-                            merchant = ocrMerchant
-                            updateCategorySuggestion()
-                        }
-                        if let ocrDate = result.date {
-                            date = ocrDate
-                        }
-                        transactionType = .expense
-                        isProcessingOCR = false
+                // Locale-aware (Spanish-first) receipt extraction.
+                let scan = ReceiptParser.parse(text)
+                await MainActor.run {
+                    if let scanned = scan.amount {
+                        amount = String(format: "%.2f", NSDecimalNumber(decimal: scanned).doubleValue)
                     }
-                } else {
-                    await MainActor.run {
-                        isProcessingOCR = false
+                    if let scannedMerchant = scan.merchant {
+                        merchant = scannedMerchant
                     }
+                    if let scannedDate = scan.date {
+                        date = scannedDate
+                    }
+                    transactionType = .expense
+                    updateCategorySuggestion()
+                    isProcessingOCR = false
                 }
             } catch {
                 await MainActor.run {
