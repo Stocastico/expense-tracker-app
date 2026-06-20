@@ -305,7 +305,8 @@ struct PDFImportView: View {
                         amountText: String(format: "%.2f", NSDecimalNumber(decimal: entry.amount).doubleValue),
                         isExpense: entry.isExpense,
                         categoryId: categoryId,
-                        isSelected: true
+                        // Settlements, transfers and zero lines are pre-unticked.
+                        isSelected: entry.kind != .ignored
                     )
                 }
 

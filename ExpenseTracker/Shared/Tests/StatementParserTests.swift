@@ -105,4 +105,45 @@ final class StatementParserTests: XCTestCase {
     func testEmptyTextReturnsNoEntries() {
         XCTAssertTrue(StatementParser.parse("").isEmpty)
     }
+
+    // MARK: - Real Kutxabank credit-card layout
+    //
+    // "Movimientos de tarjeta": Fecha · Tarjeta (masked PAN) · Concepto ·
+    // Situación · Importe, amounts as "-6,00 €" / "905,01 €".
+
+    func testCardPurchaseIsExpense() {
+        let entry = StatementParser.parseLine(
+            "01/01/2026 ******4014350600 COMPRA EN PARKING VERDE -6,00 €")
+        XCTAssertEqual(entry?.kind, .expense)
+        XCTAssertEqual(entry?.amount, dec("6.00"))
+        XCTAssertTrue(entry!.description.uppercased().contains("PARKING VERDE"))
+        XCTAssertFalse(entry!.description.contains("€"))
+    }
+
+    func testCardThousandsAmountParsed() {
+        let entry = StatementParser.parseLine(
+            "08/01/2026 ******4014350600 COMPRA EN WWW.CICAR.COM -157,38 €")
+        XCTAssertEqual(entry?.kind, .expense)
+        XCTAssertEqual(entry?.amount, dec("157.38"))
+    }
+
+    func testCardBillSettlementIsIgnored() {
+        // Positive "PAGO RECIBO <16-digit card>" is the monthly bill payment.
+        let entry = StatementParser.parseLine(
+            "01/01/2026 ******4014350600 PAGO RECIBO 4921074014350600 905,01 €")
+        XCTAssertEqual(entry?.kind, .ignored)
+    }
+
+    func testPagoReciboWithoutCardNumberStaysExpense() {
+        // A utility "PAGO RECIBO" (no card number) must remain a normal expense.
+        let entry = StatementParser.parseLine("02/03/2026  PAGO RECIBO AGUA  -30,00")
+        XCTAssertEqual(entry?.kind, .expense)
+    }
+
+    func testCardRefundIsIncome() {
+        let entry = StatementParser.parseLine(
+            "17/01/2026 ******4014350600 DEVOLUCION WWW.CICAR.COM 30,00 €")
+        XCTAssertEqual(entry?.kind, .income)
+        XCTAssertEqual(entry?.amount, dec("30.00"))
+    }
 }
