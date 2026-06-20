@@ -60,6 +60,47 @@ over keyword heuristics and the on-device model.
 
 ---
 
+## Using the app
+
+### Importing a statement (PDF)
+
+1. **Transactions → Import PDF**, pick a **text-based** PDF statement.
+2. The app extracts the text and runs the Spanish-first `StatementParser`
+   (dates, amounts, expense/income, description).
+3. In the **review** step, tick the transactions to import, fix anything, and
+   set/adjust the **category** per row (a `Picker`). Pick an account, then
+   **Import Selected**.
+4. Each category you choose is **remembered** for that merchant/description.
+
+> Scanned (image-only) PDFs have no text layer, so nothing is extracted — use
+> **Scan Receipt** for those, or export a text-based PDF from your bank.
+
+### Scanning a receipt/invoice (image)
+
+In the transaction form, **Scan Receipt** runs on-device OCR (Vision) and
+`ReceiptParser` to pre-fill amount, date and merchant; adjust and save.
+
+### Manual entry & categories
+
+- Full add/edit form, plus a **menu-bar quick-add** for fast entries.
+- Manage your own categories in **Settings → Categories**, and review/edit the
+  learned `name → category` rules in **Settings → Learned Categories**.
+
+### Trying it with your own statements
+
+The parsers default to European/Spanish notation and are covered by synthetic
+fixtures; **real layouts vary a lot**. If extraction looks off:
+
+- confirm the PDF is text-based (select text in Preview — if you can't, it's a
+  scan);
+- share an **anonymised** few lines (copy as text) so the `StatementParser`
+  fixtures can be tuned to your bank's format;
+- the on-device LLM categoriser (`FoundationModelsCategorizationEngine`) needs
+  macOS 26 + Apple Silicon and Xcode 17 to build, and is otherwise skipped in
+  favour of learned rules + heuristics.
+
+---
+
 ## Requirements
 
 | Requirement | Minimum |
