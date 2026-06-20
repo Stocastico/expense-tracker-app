@@ -52,7 +52,7 @@ struct ContentView: View {
         case .analytics:
             AnalyticsView(selectedAccount: selectedAccount)
         case .budgets:
-            BudgetsView(selectedAccount: selectedAccount)
+            BudgetsView()
         case .settings:
             SettingsView()
         case nil:

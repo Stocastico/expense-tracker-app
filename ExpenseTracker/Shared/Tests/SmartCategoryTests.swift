@@ -1,6 +1,5 @@
 import XCTest
 import Foundation
-@testable import ExpenseTracker
 
 final class SmartCategoryTests: XCTestCase {
 

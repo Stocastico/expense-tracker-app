@@ -1,7 +1,6 @@
 import XCTest
 import Foundation
 import SwiftData
-@testable import ExpenseTracker
 
 final class StatsServiceTests: XCTestCase {
 
@@ -239,7 +238,7 @@ final class StatsServiceTests: XCTestCase {
 
         XCTAssertNotNil(top)
         XCTAssertEqual(top?.categoryId, "transport")
-        XCTAssertEqual(top?.amount, 500.0, accuracy: 0.01)
+        XCTAssertEqual(top!.amount, 500.0, accuracy: 0.01)
     }
 
     func testTopCategoryEmptyTransactions() {

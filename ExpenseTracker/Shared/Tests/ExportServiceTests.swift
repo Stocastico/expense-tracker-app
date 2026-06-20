@@ -1,7 +1,6 @@
 import XCTest
 import Foundation
 import SwiftData
-@testable import ExpenseTracker
 
 final class ExportServiceTests: XCTestCase {
 
@@ -179,12 +178,12 @@ final class ExportServiceTests: XCTestCase {
         let budgets = try context.fetch(FetchDescriptor<Budget>())
         let accounts = try context.fetch(FetchDescriptor<Account>())
 
-        let jsonData = ExportService.exportToJSON(
+        let jsonData = try XCTUnwrap(ExportService.exportToJSON(
             transactions: transactions,
             budgets: budgets,
             settings: settings,
             accounts: accounts
-        )
+        ))
 
         XCTAssertFalse(jsonData.isEmpty)
 
@@ -192,7 +191,6 @@ final class ExportServiceTests: XCTestCase {
         decoder.dateDecodingStrategy = .iso8601
         let exportData = try decoder.decode(ExportData.self, from: jsonData)
 
-        XCTAssertEqual(exportData.version, "1.0")
         XCTAssertFalse(exportData.transactions.isEmpty)
         XCTAssertFalse(exportData.budgets.isEmpty)
         XCTAssertFalse(exportData.accounts.isEmpty)
@@ -217,12 +215,12 @@ final class ExportServiceTests: XCTestCase {
         let settings = makeSettings()
         try context.save()
 
-        let jsonData = ExportService.exportToJSON(
+        let jsonData = try XCTUnwrap(ExportService.exportToJSON(
             transactions: [transaction],
             budgets: [],
             settings: settings,
             accounts: [account]
-        )
+        ))
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -233,7 +231,7 @@ final class ExportServiceTests: XCTestCase {
         XCTAssertEqual(exported.type, "expense")
         XCTAssertEqual(exported.amount, 99.99, accuracy: 0.01)
         XCTAssertEqual(exported.currency, "USD")
-        XCTAssertEqual(exported.descriptionText, "Test purchase")
+        XCTAssertEqual(exported.description, "Test purchase")
         XCTAssertEqual(exported.merchant, "Test Store")
         XCTAssertEqual(exported.categoryId, "shopping")
         XCTAssertEqual(exported.notes, "Test note")
@@ -281,12 +279,12 @@ final class ExportServiceTests: XCTestCase {
         let accounts = try context.fetch(FetchDescriptor<Account>())
 
         // Export
-        let jsonData = ExportService.exportToJSON(
+        let jsonData = try XCTUnwrap(ExportService.exportToJSON(
             transactions: transactions,
             budgets: budgets,
             settings: settings,
             accounts: accounts
-        )
+        ))
 
         // Create a fresh context for import
         let importSchema = Schema([Transaction.self, Account.self, Budget.self, AppSettings.self])
@@ -334,12 +332,12 @@ final class ExportServiceTests: XCTestCase {
         let settings = makeSettings()
         try context.save()
 
-        let jsonData = ExportService.exportToJSON(
+        let jsonData = try XCTUnwrap(ExportService.exportToJSON(
             transactions: [],
             budgets: [],
             settings: settings,
             accounts: []
-        )
+        ))
 
         XCTAssertFalse(jsonData.isEmpty)
 

@@ -4,7 +4,6 @@ import SwiftData
 @main
 struct ExpenseTrackerApp: App {
     let modelContainer: ModelContainer
-    @StateObject private var syncService = SyncService(role: .advertiser)
 
     init() {
         do {
@@ -14,12 +13,13 @@ struct ExpenseTrackerApp: App {
                     Transaction.self,
                     Account.self,
                     Budget.self,
-                    AppSettings.self
+                    AppSettings.self,
+                    CategoryRule.self
                 ]),
                 cloudKitDatabase: .none
             )
             modelContainer = try ModelContainer(
-                for: Transaction.self, Account.self, Budget.self, AppSettings.self,
+                for: Transaction.self, Account.self, Budget.self, AppSettings.self, CategoryRule.self,
                 configurations: configuration
             )
         } catch {
@@ -31,11 +31,8 @@ struct ExpenseTrackerApp: App {
         WindowGroup {
             ContentView()
                 .modelContainer(modelContainer)
-                .environmentObject(syncService)
                 .onAppear {
                     createDefaultAccountsIfNeeded()
-                    syncService.setModelContext(modelContainer.mainContext)
-                    syncService.start()
                 }
         }
         .windowStyle(.titleBar)

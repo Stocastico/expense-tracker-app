@@ -185,7 +185,7 @@ public enum DefaultCategories {
             "homeowners insurance", "geico", "progressive",
             "state farm", "allstate", "liberty mutual", "usaa",
             "travelers", "axa", "allianz", "zurich", "aviva",
-            "policy", "premium", "deductible", "coverage", "claim"
+            "policy", "deductible", "coverage", "claim"
         ]
     )
 
