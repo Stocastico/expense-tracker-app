@@ -139,6 +139,9 @@ struct SettingsView: View {
             NavigationLink("Categories") {
                 CategoriesSettingsView()
             }
+            NavigationLink("Learned Categories") {
+                CategoryRulesView()
+            }
         }
     }
 
@@ -231,6 +234,7 @@ struct SettingsView: View {
             try modelContext.delete(model: Transaction.self)
             try modelContext.delete(model: Budget.self)
             try modelContext.delete(model: Account.self)
+            try modelContext.delete(model: CategoryRule.self)
             try modelContext.delete(model: AppSettings.self)
             try modelContext.save()
         } catch {
