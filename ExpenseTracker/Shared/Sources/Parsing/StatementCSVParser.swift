@@ -16,10 +16,13 @@ import Foundation
 public enum StatementCSVParser {
 
     public static func parse(_ csv: String) -> [StatementEntry] {
+        // Keep only rows with real content: this drops blank lines *and*
+        // delimiter-only filler rows (e.g. ";;;;") that spreadsheet exports
+        // append by the hundred.
         let rows = csv
             .components(separatedBy: .newlines)
             .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "\r")) }
-            .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+            .filter { $0.rangeOfCharacter(from: .alphanumerics) != nil }
         guard !rows.isEmpty else { return [] }
 
         let delimiter = detectDelimiter(in: rows)
