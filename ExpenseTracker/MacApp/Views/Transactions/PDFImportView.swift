@@ -26,7 +26,7 @@ struct PDFImportView: View {
         VStack(spacing: 0) {
             // Header with step indicator
             VStack(spacing: 8) {
-                Text("Import from PDF")
+                Text("Import Statement")
                     .font(.headline)
 
                 HStack(spacing: 20) {
@@ -57,7 +57,7 @@ struct PDFImportView: View {
         .alert("No transactions found", isPresented: $showNoTransactions) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Couldn't read any transactions from this PDF. Make sure it's a text-based statement (not a scanned image); for scanned receipts, use Scan Receipt instead.")
+            Text("Couldn't read any transactions from this file. For a PDF, make sure it's text-based (not a scanned image); for an account export, save it as CSV from your bank. For scanned receipts, use Scan Receipt instead.")
         }
     }
 
@@ -88,20 +88,21 @@ struct PDFImportView: View {
                 .font(.system(size: 56))
                 .foregroundStyle(.secondary)
 
-            Text("Select a bank statement PDF to import transactions")
+            Text("Select a credit-card statement (PDF) or a bank-account export saved as CSV")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
 
             Button {
-                openPDFPicker()
+                openFilePicker()
             } label: {
-                Label("Choose PDF File", systemImage: "folder")
+                Label("Choose PDF or CSV File", systemImage: "folder")
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
 
             if isLoading {
-                ProgressView("Parsing PDF...")
+                ProgressView("Parsing statement...")
             }
 
             Spacer()
@@ -276,20 +277,20 @@ struct PDFImportView: View {
 
     // MARK: - Actions
 
-    private func openPDFPicker() {
+    private func openFilePicker() {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [UTType.pdf]
+        panel.allowedContentTypes = [.pdf, .commaSeparatedText, .plainText]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
-        panel.message = "Select a PDF bank statement"
+        panel.message = "Select a PDF statement or a CSV account export"
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
         isLoading = true
         DispatchQueue.global(qos: .userInitiated).async {
-            // Locale-aware extraction (Spanish-first) via StatementParser.
-            let text = PDFImportService.extractText(from: url)
-            let entries = StatementParser.parse(text)
+            // PDFs go through the locale-aware text StatementParser; CSV account
+            // exports use the column-based StatementCSVParser (signed importe).
+            let entries = parseStatement(at: url)
 
             DispatchQueue.main.async {
                 // Learned rules first, then keyword heuristics, for the initial
@@ -305,7 +306,8 @@ struct PDFImportView: View {
                         amountText: String(format: "%.2f", NSDecimalNumber(decimal: entry.amount).doubleValue),
                         isExpense: entry.isExpense,
                         categoryId: categoryId,
-                        isSelected: true
+                        // Settlements, transfers and zero lines are pre-unticked.
+                        isSelected: entry.kind != .ignored
                     )
                 }
 
@@ -319,6 +321,27 @@ struct PDFImportView: View {
                 }
             }
         }
+    }
+
+    /// Routes a picked file to the right parser: CSV/plain-text account exports
+    /// to `StatementCSVParser`, everything else (PDF) to `StatementParser`.
+    private func parseStatement(at url: URL) -> [StatementEntry] {
+        let ext = url.pathExtension.lowercased()
+        if ext == "csv" || ext == "txt" || ext == "tsv" {
+            guard let text = readText(at: url) else { return [] }
+            return StatementCSVParser.parse(text)
+        }
+        return StatementParser.parse(PDFImportService.extractText(from: url))
+    }
+
+    /// Reads a text file, tolerating the encodings banks emit (UTF-8, then
+    /// Windows-1252 / ISO Latin-1 for accented Spanish text).
+    private func readText(at url: URL) -> String? {
+        if let utf8 = try? String(contentsOf: url, encoding: .utf8) { return utf8 }
+        for encoding: String.Encoding in [.windowsCP1252, .isoLatin1, .macOSRoman] {
+            if let text = try? String(contentsOf: url, encoding: encoding) { return text }
+        }
+        return nil
     }
 
     private func importSelectedTransactions() {

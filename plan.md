@@ -35,9 +35,15 @@ The iOS companion app and MultipeerConnectivity sync are archived on
 
 3. **Statement extraction** ✅
    - `StatementParser`: statement text → structured `StatementEntry`s (date,
-     amount, expense/income, description), skipping headers/balances, with
-     Spanish income-keyword detection. Synthetic fixtures as test data; to be
-     tuned against a real statement.
+     amount, expense/income/**ignored**, description), skipping headers/balances,
+     with Spanish income-keyword detection. Tuned against a real Kutxabank
+     *Movimientos de tarjeta* (PDF).
+   - `StatementCSVParser`: bank-account CSV export (*Movimientos de cuenta*,
+     `fecha;concepto;fecha valor;importe;saldo`) → `StatementEntry`s, taking the
+     sign from the `importe` column rather than the `saldo` balance.
+   - `StatementClassifier`: shared rules flagging the card-bill settlement,
+     own-account transfers, pension contributions and zero-amount lines as
+     `.ignored` so they are excluded from totals (and pre-unticked on import).
 
 4. **Auto-categorisation engine** ✅
    - Learned rules: `CategoryRule` + `CategoryRuleService` (normalised by

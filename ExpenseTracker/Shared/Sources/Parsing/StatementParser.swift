@@ -3,15 +3,21 @@ import Foundation
 /// A single transaction extracted from a statement line.
 public struct StatementEntry: Equatable {
     public let date: Date?
-    /// Absolute amount; sign is conveyed by `isExpense`.
+    /// Absolute amount; the sign is conveyed by `kind`.
     public let amount: Decimal
-    public let isExpense: Bool
+    /// Expense, income, or `ignored` (settlement/transfer/zero — see
+    /// `StatementClassifier`).
+    public let kind: StatementEntryKind
     public let description: String
 
-    public init(date: Date?, amount: Decimal, isExpense: Bool, description: String) {
+    /// Convenience for call sites that only distinguish spending: `true` only
+    /// for `.expense` (an `.ignored` line is not an expense).
+    public var isExpense: Bool { kind == .expense }
+
+    public init(date: Date?, amount: Decimal, kind: StatementEntryKind, description: String) {
         self.date = date
         self.amount = amount
-        self.isExpense = isExpense
+        self.kind = kind
         self.description = description
     }
 }
@@ -35,15 +41,24 @@ public enum StatementParser {
         guard let token = lastAmountToken(in: line),
               let signed = MoneyParser.parse(token) else { return nil }
 
-        let isExpense = signed < 0 ? true : !hasIncomeKeyword(line)
         let description = cleanDescription(line, amountToken: token)
+        let kind = classify(line: line, signed: signed)
 
         return StatementEntry(
             date: date,
             amount: signed.absoluteValue,
-            isExpense: isExpense,
+            kind: kind,
             description: description
         )
+    }
+
+    /// Classifies a line: settlements/transfers/zero are `.ignored`; otherwise
+    /// a negative sign marks an expense and a positive amount is income only
+    /// when it carries an income keyword (else a default expense).
+    private static func classify(line: String, signed: Decimal) -> StatementEntryKind {
+        if StatementClassifier.isIgnored(description: line, amount: signed) { return .ignored }
+        if signed < 0 { return .expense }
+        return hasIncomeKeyword(line) ? .income : .expense
     }
 
     // MARK: - Skip rules

@@ -109,7 +109,7 @@ struct TransactionListView: View {
                 Button {
                     showingPDFImport = true
                 } label: {
-                    Label("Import PDF", systemImage: "doc.text")
+                    Label("Import Statement", systemImage: "doc.text")
                 }
 
                 Button {

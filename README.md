@@ -62,18 +62,32 @@ over keyword heuristics and the on-device model.
 
 ## Using the app
 
-### Importing a statement (PDF)
+### Importing a statement (PDF or CSV)
 
-1. **Transactions → Import PDF**, pick a **text-based** PDF statement.
-2. The app extracts the text and runs the Spanish-first `StatementParser`
-   (dates, amounts, expense/income, description).
-3. In the **review** step, tick the transactions to import, fix anything, and
-   set/adjust the **category** per row (a `Picker`). Pick an account, then
-   **Import Selected**.
+1. **Transactions → Import Statement**, then pick either:
+   - a **text-based PDF** credit-card statement (e.g. Kutxabank *Movimientos de
+     tarjeta*) — parsed by the Spanish-first `StatementParser`; or
+   - a bank-**account** export saved as **CSV** (e.g. Kutxabank *Movimientos de
+     cuenta*, `fecha;concepto;fecha valor;importe;saldo`) — parsed by
+     `StatementCSVParser`, which takes income/expense from the signed `importe`
+     column (not the running `saldo` balance).
+2. Each movement is classified as **expense**, **income**, or **ignored**. The
+   following are pre-unticked as *ignored* (excluded from your totals):
+   - the monthly **credit-card bill settlement** (`PAGO RECIBO …` on the card,
+     `TARJ.CRDTO …` on the account) — it would otherwise double-count the
+     individual card purchases;
+   - **transfers between your own accounts** (`TRASPASO`, `TRANSF.`, `Transfer`);
+   - **pension contributions** (`BASKEPENSIONES`, `EPSV`, `PENSION`);
+   - **zero-amount** lines (e.g. interest liquidation at `0,00`).
+3. In the **review** step, tick/untick rows, fix anything, and set/adjust the
+   **category** per row (a `Picker`). Pick an account, then **Import Selected**.
 4. Each category you choose is **remembered** for that merchant/description.
 
 > Scanned (image-only) PDFs have no text layer, so nothing is extracted — use
-> **Scan Receipt** for those, or export a text-based PDF from your bank.
+> **Scan Receipt** for those, or export a text-based PDF from your bank. Old
+> binary `.xls` exports aren't read directly (no external dependencies) — save
+> them as **CSV** first (one click in Excel/Numbers); a semicolon-delimited
+> file with comma decimals is expected, but tab/comma delimiters also work.
 
 ### Scanning a receipt/invoice (image)
 
@@ -88,13 +102,18 @@ In the transaction form, **Scan Receipt** runs on-device OCR (Vision) and
 
 ### Trying it with your own statements
 
-The parsers default to European/Spanish notation and are covered by synthetic
-fixtures; **real layouts vary a lot**. If extraction looks off:
+The parsers default to European/Spanish notation and are tuned against real
+Kutxabank exports (card PDF, account CSV); **real layouts vary a lot**. If
+extraction looks off:
 
-- confirm the PDF is text-based (select text in Preview — if you can't, it's a
-  scan);
-- share an **anonymised** few lines (copy as text) so the `StatementParser`
-  fixtures can be tuned to your bank's format;
+- for a **PDF**, confirm it's text-based (select text in Preview — if you
+  can't, it's a scan);
+- for an **account CSV**, a `;`-delimited file with comma decimals and a
+  `fecha;concepto;…;importe;saldo` header is expected (tab/comma delimiters
+  also work); CSV is the most deterministic path since the sign comes straight
+  from the `importe` column;
+- share an **anonymised** few lines (copy as text) so the `StatementParser` /
+  `StatementCSVParser` fixtures can be tuned to your bank's format;
 - the on-device LLM categoriser (`FoundationModelsCategorizationEngine`) needs
   macOS 26 + Apple Silicon and Xcode 17 to build, and is otherwise skipped in
   favour of learned rules + heuristics.
@@ -129,7 +148,8 @@ ExpenseTracker/
 │   │   │                        # CategorizationEngine, CategoryResolver,
 │   │   │                        # FoundationModelsCategorizationEngine (gated)
 │   │   ├── Parsing/             # MoneyParser, DocumentDateParser,
-│   │   │                        # StatementParser, MerchantKey
+│   │   │                        # StatementParser, StatementCSVParser,
+│   │   │                        # StatementClassifier, MerchantKey
 │   │   ├── Extensions/          # Date, Currency, Color helpers
 │   │   └── Defaults/            # Default categories
 │   └── Tests/                   # XCTest unit tests
@@ -173,7 +193,9 @@ CI runs the same on a macOS runner for every push
 | `ModelTests` | Model creation, computed properties, enum roundtrips, Category Codable |
 | `MoneyParserTests` | European/US amount parsing, separators, signs, currency symbols |
 | `DocumentDateParserTests` | Day-first/ISO dates, ES/IT/EU/EN month names, invalid dates |
-| `StatementParserTests` | Statement lines → transactions, header/balance skipping, income keywords |
+| `StatementParserTests` | Statement lines → transactions, header/balance skipping, income keywords, real Kutxabank card layout (settlement/refund) |
+| `StatementCSVParserTests` | Account CSV (`fecha;concepto;…;importe;saldo`) → transactions via signed importe column |
+| `StatementClassifierTests` | Expense/income/ignored rules (settlement, transfers, pension, zero) |
 | `MerchantKeyTests` | Merchant normalisation (diacritics, digits, whitespace) |
 | `CategoryRuleServiceTests` | Learn/lookup/upsert of learned category rules |
 | `CategorizationEngineTests` | Heuristic engine + resolver precedence (learned → engine) |
