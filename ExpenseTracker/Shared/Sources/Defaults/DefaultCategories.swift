@@ -91,7 +91,7 @@ public enum DefaultCategories {
         keywords: [
             "electric", "electricity", "water", "gas bill", "internet",
             "wifi", "broadband", "comcast", "at&t", "verizon",
-            "t-mobile", "sprint", "vodafone", "o2", "ee", "three",
+            "t-mobile", "sprint", "vodafone", "o2", "ee mobile", "three",
             "phone bill", "mobile plan", "cable", "sewage", "trash",
             "waste", "utility", "heating", "cooling", "solar"
         ]
