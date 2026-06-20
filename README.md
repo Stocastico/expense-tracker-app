@@ -204,6 +204,7 @@ CI runs the same on a macOS runner for every push
 | `ExportServiceTests` | CSV/JSON export & import roundtrip |
 | `PDFImportTests` | Bank statement text parsing |
 | `SmartCategoryTests` | Keyword matching, merchant priority, fallback |
+| `SpanishMerchantCategoryTests` | Auto-categorising real Spanish/Basque merchants (Eroski, Vueling, Cicar, Mugi, Bidegi, farmacia, nómina…) |
 
 ---
 

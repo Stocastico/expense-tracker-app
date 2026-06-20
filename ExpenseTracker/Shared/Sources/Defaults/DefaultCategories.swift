@@ -19,7 +19,9 @@ public enum DefaultCategories {
             "just eat", "takeaway", "takeout", "diner", "bistro", "bar",
             "pub", "kfc", "wendy's", "taco bell", "chipotle", "panera",
             "dunkin", "tim hortons", "pret", "nando's", "five guys",
-            "domino's", "papa john's", "wolt"
+            "domino's", "papa john's", "wolt",
+            // Spanish / Basque
+            "pizzeria", "cafeteria", "kafe", "taberna", "asador", "sidreria"
         ]
     )
 
@@ -36,7 +38,10 @@ public enum DefaultCategories {
             "meijer", "food lion", "piggly wiggly", "albert heijn",
             "carrefour", "tesco", "sainsbury", "asda", "waitrose",
             "marks & spencer food", "rewe", "edeka", "penny", "netto",
-            "mercadona", "esselunga", "coop", "migros", "spar"
+            "mercadona", "esselunga", "coop", "migros", "spar",
+            // Spanish / Basque
+            "eroski", "supermercado", "alimentacion", "fruteria",
+            "panaderia", "pasteleria", "tahona", "carniceria", "ogi berri"
         ]
     )
 
@@ -53,7 +58,10 @@ public enum DefaultCategories {
             "amtrak", "greyhound", "bolt", "grab", "gojek", "ola",
             "car wash", "car repair", "mechanic", "auto", "vehicle",
             "tire", "oil change", "registration", "dmv", "tfl",
-            "deutsche bahn", "sncf", "renfe", "trenitalia", "flixbus"
+            "deutsche bahn", "sncf", "renfe", "trenitalia", "flixbus",
+            // Spanish / Basque fuel, tolls, transit, parking
+            "carburante", "cepsa", "cedipsa", "repsol", "petronor",
+            "mugi", "bidegi", "peaje", "aeropuerto", "euskotren", "aparcamiento"
         ]
     )
 
@@ -68,7 +76,9 @@ public enum DefaultCategories {
             "home repair", "plumber", "electrician", "contractor",
             "furniture", "ikea", "home depot", "lowe's", "ace hardware",
             "wayfair", "pottery barn", "west elm", "crate & barrel",
-            "real estate", "landlord", "lease", "apartment"
+            "real estate", "landlord", "lease", "apartment",
+            // Spanish / Basque
+            "ferreteria", "fontanero", "alquiler"
         ]
     )
 
@@ -100,7 +110,9 @@ public enum DefaultCategories {
             "prescription", "medicine", "health insurance", "copay",
             "lab", "x-ray", "surgery", "urgent care", "emergency",
             "mental health", "psychiatrist", "psychologist", "vitamin",
-            "supplement", "boots pharmacy", "apotheke"
+            "supplement", "boots pharmacy", "apotheke",
+            // Spanish / Basque
+            "farmacia", "fcia", "clinica", "dentista", "optica", "medico"
         ]
     )
 
@@ -135,7 +147,9 @@ public enum DefaultCategories {
             "marshalls", "ross", "primark", "asos", "shein",
             "best buy", "apple store", "samsung", "electronics",
             "clothing", "shoes", "accessories", "mall", "outlet",
-            "zalando", "about you", "otto"
+            "zalando", "about you", "otto",
+            // Spanish / Basque
+            "amzn", "bazar", "corte ingles"
         ]
     )
 
@@ -169,7 +183,10 @@ public enum DefaultCategories {
             "suitcase", "passport", "visa", "airport", "rental car",
             "hertz", "avis", "enterprise", "sixt", "europcar",
             "ryanair", "easyjet", "lufthansa", "british airways",
-            "delta", "united", "american airlines", "southwest"
+            "delta", "united", "american airlines", "southwest",
+            // Spanish / Basque
+            "vueling", "iberia", "cicar", "homeexchange",
+            "apartamentos", "aparthotel", "hostal"
         ]
     )
 
@@ -201,7 +218,9 @@ public enum DefaultCategories {
             "makeup", "sephora", "ulta", "bath & body works",
             "perfume", "cologne", "grooming", "facial", "waxing",
             "beauty", "dermatologist", "gym", "fitness", "yoga",
-            "pilates", "crossfit", "personal trainer"
+            "pilates", "crossfit", "personal trainer",
+            // Spanish / Basque
+            "peluqueria", "barberia", "estetica", "lavanderia"
         ]
     )
 
@@ -235,7 +254,9 @@ public enum DefaultCategories {
             "slack", "zoom", "subscription", "membership",
             "patreon", "substack", "medium", "new york times",
             "wall street journal", "newspaper", "magazine",
-            "crunchyroll", "dazn", "apple tv", "apple one"
+            "crunchyroll", "dazn", "apple tv", "apple one",
+            // AI / software subscriptions
+            "openai", "chatgpt", "claude", "anthropic"
         ]
     )
 
@@ -249,7 +270,9 @@ public enum DefaultCategories {
         type: .income,
         keywords: [
             "salary", "payroll", "paycheck", "wage", "direct deposit",
-            "employer", "compensation", "pay", "earnings", "income"
+            "employer", "compensation", "pay", "earnings", "income",
+            // Spanish
+            "nomina", "salario", "sueldo", "paga"
         ]
     )
 
@@ -292,7 +315,9 @@ public enum DefaultCategories {
             "rebate", "bonus", "award", "prize", "lottery",
             "inheritance", "rental income", "royalty", "alimony",
             "child support", "government", "stimulus", "tax refund",
-            "venmo", "paypal", "zelle", "transfer received"
+            "venmo", "paypal", "zelle", "transfer received",
+            // Spanish
+            "devolucion", "reembolso", "reintegro"
         ]
     )
 
