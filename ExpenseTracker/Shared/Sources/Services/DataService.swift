@@ -45,8 +45,17 @@ public struct TransactionFilter {
 public class DataService {
     public var modelContext: ModelContext
 
-    public init(modelContext: ModelContext) {
+    /// Resolves a legacy flat category id to the new two-level catalog when
+    /// mirroring writes into the domain store (same resolver the launch
+    /// migration uses, so categories line up).
+    private let resolveCategory: LegacyExpenseMigration.CategoryResolver
+
+    public init(
+        modelContext: ModelContext,
+        resolveCategory: @escaping LegacyExpenseMigration.CategoryResolver = DefaultLegacyCategoryMapping.resolver()
+    ) {
         self.modelContext = modelContext
+        self.resolveCategory = resolveCategory
     }
 
     // MARK: - Fetch Operations
@@ -159,15 +168,18 @@ public class DataService {
 
     public func addTransaction(_ transaction: Transaction) {
         modelContext.insert(transaction)
+        mirror(transaction)
         saveContext()
     }
 
     public func updateTransaction(_ transaction: Transaction) {
         transaction.updatedAt = Date()
+        mirror(transaction)
         saveContext()
     }
 
     public func deleteTransaction(_ transaction: Transaction) {
+        removeMirror(id: transaction.id)
         modelContext.delete(transaction)
         saveContext()
     }
@@ -183,6 +195,7 @@ public class DataService {
                     || t.recurringParentId == parentId
             }
             for t in relatedTransactions {
+                removeMirror(id: t.id)
                 modelContext.delete(t)
             }
         } catch {
@@ -239,6 +252,35 @@ public class DataService {
 
     public func updateSettings(_ settings: AppSettings) {
         saveContext()
+    }
+
+    // MARK: - Domain mirror (write-through)
+
+    /// Upserts the `ExpenseTransactionRecord` mirroring `transaction`, keeping the
+    /// new domain store current with legacy writes so repository-backed readers
+    /// don't go stale between launches. The mirror shares the legacy id, so it
+    /// stays consistent with (and idempotent against) the launch migration.
+    private func mirror(_ transaction: Transaction) {
+        let domain = LegacyExpenseMigration.migrate(transaction, resolveCategory: resolveCategory)
+        if let existing = mirrorRecord(id: domain.id) {
+            existing.update(from: domain)
+        } else {
+            modelContext.insert(ExpenseTransactionRecord(from: domain))
+        }
+    }
+
+    /// Removes the mirroring domain record for a legacy transaction id, if present.
+    private func removeMirror(id: UUID) {
+        if let existing = mirrorRecord(id: id) {
+            modelContext.delete(existing)
+        }
+    }
+
+    private func mirrorRecord(id: UUID) -> ExpenseTransactionRecord? {
+        let descriptor = FetchDescriptor<ExpenseTransactionRecord>(
+            predicate: #Predicate { $0.id == id }
+        )
+        return try? modelContext.fetch(descriptor).first
     }
 
     // MARK: - Private Helpers
