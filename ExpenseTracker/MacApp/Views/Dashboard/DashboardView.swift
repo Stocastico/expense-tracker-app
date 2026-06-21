@@ -4,9 +4,15 @@ import SwiftData
 struct DashboardView: View {
     let selectedAccount: Account?
 
-    @Query(sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
+    @Environment(\.expenseRepository) private var repository
+    @Environment(ExpenseErrorPresenter.self) private var errorPresenter
     @Query private var budgets: [Budget]
     @Query private var settingsResults: [AppSettings]
+
+    /// Domain transactions read through the repository (kept current with legacy
+    /// writes by `DataService`'s write-through). Loaded on appear and when the
+    /// account changes.
+    @State private var transactions: [ExpenseDomain.Transaction] = []
 
     private var settings: AppSettings {
         settingsResults.first ?? AppSettings()
@@ -16,16 +22,18 @@ struct DashboardView: View {
         settings.currency
     }
 
-    private var filteredTransactions: [Transaction] {
-        guard let account = selectedAccount else { return allTransactions }
-        return allTransactions.filter { $0.account?.id == account.id }
+    /// Account-filtered, newest-first — the shape `DashboardFigures` expects.
+    private var scopedTransactions: [ExpenseDomain.Transaction] {
+        let scoped = selectedAccount.map { account in
+            transactions.filter { $0.accountId == account.id }
+        } ?? transactions
+        return scoped.sorted { $0.date > $1.date }
     }
 
     var body: some View {
-        // Derive every figure once per render instead of re-scanning the
-        // transactions inside each computed property.
-        let summary = DashboardSummary.make(
-            transactions: filteredTransactions,
+        // Derive every figure once per render from the domain transactions.
+        let figures = DashboardFigures.make(
+            transactions: scopedTransactions,
             budgets: budgets,
             startOfMonthDay: settings.startOfMonth
         )
@@ -33,28 +41,36 @@ struct DashboardView: View {
         ScrollView {
             VStack(spacing: 20) {
                 BalanceCardView(
-                    netBalance: summary.netBalance,
-                    trend: summary.spendingTrend,
+                    netBalance: figures.netBalance.doubleValue,
+                    trend: figures.spendingTrend,
                     currency: currency
                 )
 
-                statsGrid(summary)
+                statsGrid(figures)
 
-                if !summary.budgetAlerts.isEmpty {
-                    budgetAlertsSection(summary.budgetAlerts)
+                if !figures.budgetAlerts.isEmpty {
+                    budgetAlertsSection(figures.budgetAlerts)
                 }
 
-                recentTransactionsSection(summary.recentTransactions)
+                recentTransactionsSection(figures.recentTransactions)
             }
             .padding(24)
         }
         .navigationTitle("Dashboard")
         .background(Color(nsColor: .windowBackgroundColor))
+        .task { load() }
+        .onChange(of: selectedAccount?.id) { _, _ in load() }
+    }
+
+    private func load() {
+        if let loaded = errorPresenter.perform("Loading dashboard", { try repository.transactions() }) {
+            transactions = loaded
+        }
     }
 
     // MARK: - Stats Grid
 
-    private func statsGrid(_ summary: DashboardSummary) -> some View {
+    private func statsGrid(_ figures: DashboardFigures) -> some View {
         LazyVGrid(columns: [
             GridItem(.flexible(), spacing: 12),
             GridItem(.flexible(), spacing: 12),
@@ -63,25 +79,25 @@ struct DashboardView: View {
         ], spacing: 12) {
             StatCardView(
                 title: "Expenses",
-                value: summary.monthExpenses.currencyFormatted(code: currency),
+                value: figures.monthExpenses.currencyFormatted(code: currency),
                 icon: "arrow.down.circle.fill",
                 color: .red
             )
             StatCardView(
                 title: "Income",
-                value: summary.monthIncome.currencyFormatted(code: currency),
+                value: figures.monthIncome.currencyFormatted(code: currency),
                 icon: "arrow.up.circle.fill",
                 color: .green
             )
             StatCardView(
                 title: "Net",
-                value: summary.netBalance.currencyFormatted(code: currency),
+                value: figures.netBalance.currencyFormatted(code: currency),
                 icon: "plusminus.circle.fill",
-                color: summary.netBalance >= 0 ? .green : .red
+                color: figures.netBalance >= 0 ? .green : .red
             )
             StatCardView(
                 title: "Top Category",
-                value: summary.topCategory?.name ?? "N/A",
+                value: figures.topCategory?.name ?? "N/A",
                 icon: "star.circle.fill",
                 color: .orange
             )
@@ -90,7 +106,7 @@ struct DashboardView: View {
 
     // MARK: - Budget Alerts
 
-    private func budgetAlertsSection(_ alerts: [DashboardSummary.BudgetAlert]) -> some View {
+    private func budgetAlertsSection(_ alerts: [DashboardFigures.BudgetAlert]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Label("Budget Alerts", systemImage: "exclamationmark.triangle.fill")
                 .font(.headline)
@@ -133,7 +149,7 @@ struct DashboardView: View {
 
     // MARK: - Recent Transactions
 
-    private func recentTransactionsSection(_ recent: [Transaction]) -> some View {
+    private func recentTransactionsSection(_ recent: [ExpenseDomain.Transaction]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Recent Transactions")
@@ -173,23 +189,23 @@ struct DashboardView: View {
         )
     }
 
-    private func dashboardTransactionRow(_ transaction: Transaction) -> some View {
-        let cat = DefaultCategories.category(withId: transaction.categoryId)
+    private func dashboardTransactionRow(_ transaction: ExpenseDomain.Transaction) -> some View {
+        let isExpense = transaction.type == .expense
         return HStack(spacing: 12) {
-            Text(cat.icon)
+            Image(systemName: isExpense ? "arrow.down.circle.fill" : "arrow.up.circle.fill")
                 .font(.title3)
+                .foregroundStyle(isExpense ? Color.red : Color.green)
                 .frame(width: 32, height: 32)
                 .background(
-                    Circle()
-                        .fill(Color(hex: cat.color).opacity(0.15))
+                    Circle().fill((isExpense ? Color.red : Color.green).opacity(0.12))
                 )
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(transaction.descriptionText)
+                Text(title(for: transaction))
                     .font(.subheadline)
                     .lineLimit(1)
-                if let merchant = transaction.merchant, !merchant.isEmpty {
-                    Text(merchant)
+                if let categoryName = transaction.category?.displayName {
+                    Text(categoryName)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -198,11 +214,9 @@ struct DashboardView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(transaction.type == .expense
-                    ? "-\(transaction.storedAmount.currencyFormatted(code: currency))"
-                    : "+\(transaction.storedAmount.currencyFormatted(code: currency))")
+                Text((isExpense ? "-" : "+") + transaction.amount.currencyFormatted(code: currency))
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(transaction.type == .expense ? .red : .green)
+                    .foregroundStyle(isExpense ? .red : .green)
 
                 Text(transaction.date.shortDateString)
                     .font(.caption2)
@@ -211,4 +225,19 @@ struct DashboardView: View {
         }
         .padding(.vertical, 2)
     }
+
+    /// Display title: merchant, then description, then a placeholder.
+    private func title(for transaction: ExpenseDomain.Transaction) -> String {
+        if let merchant = transaction.merchant, !merchant.trimmingCharacters(in: .whitespaces).isEmpty {
+            return merchant
+        }
+        if !transaction.descriptionText.trimmingCharacters(in: .whitespaces).isEmpty {
+            return transaction.descriptionText
+        }
+        return "Untitled"
+    }
+}
+
+private extension Decimal {
+    var doubleValue: Double { NSDecimalNumber(decimal: self).doubleValue }
 }
