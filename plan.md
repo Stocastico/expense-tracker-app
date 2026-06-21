@@ -67,3 +67,10 @@ The iOS companion app and MultipeerConnectivity sync are archived on
 `Transaction`, `Account`, `Budget`, `AppSettings`, `Category` — SwiftData
 `@Model` classes in `Shared/Sources/Models`. Money stored as `Double`,
 handled as `Decimal` where precision matters (parsing).
+
+Alongside this legacy core there is now a pure, SwiftData-independent
+`ExpenseDomain` (two-level categories, tags, `Decimal` money) behind
+`ExpenseRepository`, with a SwiftData adapter (`ExpenseTransactionRecord` et al.).
+Legacy data migrates into it on launch via `LegacyExpenseMigrationRunner`
+(`Double`→`Decimal` at the boundary). The plan is to adopt this repository in
+the UI incrementally and retire the legacy `Double` math. See `TODO.md` (P0/P1).
