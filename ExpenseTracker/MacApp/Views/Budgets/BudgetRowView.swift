@@ -3,39 +3,30 @@ import SwiftData
 
 struct BudgetRowView: View {
     let budget: Budget
-    let transactions: [Transaction]
+    /// Domain transactions the spend is computed from (read through the repository).
+    let transactions: [ExpenseDomain.Transaction]
     var startOfMonth: Int = 1
 
     private var category: Category {
         DefaultCategories.category(withId: budget.categoryId)
     }
 
-    private var periodRange: (start: Date, end: Date) {
-        budget.currentPeriodRange(startOfMonth: startOfMonth)
+    private var spent: Decimal {
+        BudgetSpending.spent(for: budget, in: transactions, startOfMonth: startOfMonth)
     }
 
-    private var spent: Double {
-        transactions.filter { transaction in
-            transaction.transactionType == .expense
-                && transaction.categoryId == budget.categoryId
-                && transaction.date >= periodRange.start
-                && transaction.date <= periodRange.end
-        }
-        .reduce(0.0) { $0 + $1.storedAmount }
-    }
-
-    private var budgetAmount: Double {
-        budget.storedAmount
+    private var budgetAmount: Decimal {
+        budget.amount
     }
 
     private var percentage: Double {
         guard budgetAmount > 0 else { return 0 }
-        return (spent / budgetAmount) * 100.0
+        return (spent.doubleValue / budgetAmount.doubleValue) * 100.0
     }
 
     private var progressRatio: Double {
         guard budgetAmount > 0 else { return 0 }
-        return min(spent / budgetAmount, 1.5)
+        return min(spent.doubleValue / budgetAmount.doubleValue, 1.5)
     }
 
     private var statusColor: Color {
@@ -117,4 +108,8 @@ struct BudgetRowView: View {
         }
         .padding(.vertical, 4)
     }
+}
+
+private extension Decimal {
+    var doubleValue: Double { NSDecimalNumber(decimal: self).doubleValue }
 }
