@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 /// A minimal add-transaction sheet that writes through `ExpenseRepository`.
 /// Thin shell over `ExpenseTransactionFormModel`.
@@ -11,6 +12,7 @@ struct AddDomainTransactionView: View {
     @Environment(\.expenseRepository) private var repository
     @Environment(ExpenseErrorPresenter.self) private var errorPresenter
     @Environment(\.dismiss) private var dismiss
+    @Query(sort: \Account.createdAt) private var accounts: [Account]
     @State private var model: ExpenseTransactionFormModel?
 
     var body: some View {
@@ -72,6 +74,29 @@ struct AddDomainTransactionView: View {
                     }
                 }
             }
+
+            if !model.accounts.isEmpty {
+                Picker("Account", selection: $model.selectedAccountId) {
+                    Text("None").tag(UUID?.none)
+                    ForEach(model.accounts) { account in
+                        Text(account.name).tag(UUID?.some(account.id))
+                    }
+                }
+            }
+
+            if !model.availableTags.isEmpty {
+                Section("Tags") {
+                    ForEach(model.availableTags) { tag in
+                        Toggle(tag.displayName, isOn: Binding(
+                            get: { model.selectedTagIds.contains(tag.id) },
+                            set: { isOn in
+                                if isOn { model.selectedTagIds.insert(tag.id) }
+                                else { model.selectedTagIds.remove(tag.id) }
+                            }
+                        ))
+                    }
+                }
+            }
         }
         .formStyle(.grouped)
     }
@@ -82,6 +107,7 @@ struct AddDomainTransactionView: View {
             repository: repository,
             errorPresenter: errorPresenter,
             editing: editing,
+            accounts: accounts.map { .init(id: $0.id, name: $0.name) },
             onSaved: {
                 dismiss()
                 onSaved()

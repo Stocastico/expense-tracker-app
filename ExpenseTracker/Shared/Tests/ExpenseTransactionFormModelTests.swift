@@ -90,6 +90,66 @@ struct ExpenseTransactionFormModelTests {
         #expect(try repository.transactions().isEmpty)
     }
 
+    @Test("load() populates the available tags")
+    func loadPopulatesTags() {
+        let (model, _, _) = makeModel()
+        #expect(!model.availableTags.isEmpty)
+        #expect(model.availableTags.contains { $0.displayName == "work" })
+    }
+
+    @Test("Account options are exposed as provided")
+    func accountsExposed() {
+        let id = UUID()
+        let model = ExpenseTransactionFormModel(
+            repository: ExpenseDomain.InMemoryRepository.seeded(),
+            errorPresenter: ExpenseErrorPresenter(),
+            accounts: [.init(id: id, name: "Family")]
+        )
+        #expect(model.accounts.map(\.name) == ["Family"])
+    }
+
+    @Test("Saving stores the selected tags and account")
+    func savesTagsAndAccount() throws {
+        let account = UUID()
+        let repository = ExpenseDomain.InMemoryRepository.seeded()
+        let model = ExpenseTransactionFormModel(
+            repository: repository,
+            errorPresenter: ExpenseErrorPresenter(),
+            accounts: [.init(id: account, name: "Personal")]
+        )
+        model.load()
+        model.type = .income
+        model.amountText = "50"
+        let work = try #require(model.availableTags.first { $0.displayName == "work" })
+        model.selectedTagIds = [work.id]
+        model.selectedAccountId = account
+
+        #expect(model.save())
+        let stored = try repository.transactions()[0]
+        #expect(stored.tags.map(\.displayName) == ["work"])
+        #expect(stored.accountId == account)
+    }
+
+    @Test("Editing prefills the selected tags and account")
+    func editingPrefillsTagsAndAccount() {
+        let account = UUID()
+        let tag = ExpenseDomain.Tag(displayName: "work")
+        let original = ExpenseDomain.Transaction(
+            amount: Decimal(string: "5.00")!,
+            type: .expense,
+            tags: [tag],
+            accountId: account
+        )
+        let model = ExpenseTransactionFormModel(
+            repository: ExpenseDomain.InMemoryRepository.seeded(),
+            errorPresenter: ExpenseErrorPresenter(),
+            editing: original
+        )
+        model.load()
+        #expect(model.selectedTagIds == [tag.id])
+        #expect(model.selectedAccountId == account)
+    }
+
     @Test("onSaved fires on a successful save")
     func onSavedFires() {
         var saved = false
