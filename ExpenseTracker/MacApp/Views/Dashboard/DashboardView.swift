@@ -4,7 +4,6 @@ import SwiftData
 struct DashboardView: View {
     let selectedAccount: Account?
 
-    @Environment(\.modelContext) private var modelContext
     @Query(sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
     @Query private var budgets: [Budget]
     @Query private var settingsResults: [AppSettings]
@@ -17,91 +16,35 @@ struct DashboardView: View {
         settings.currency
     }
 
-    private var dataService: DataService {
-        DataService(modelContext: modelContext)
-    }
-
     private var filteredTransactions: [Transaction] {
         guard let account = selectedAccount else { return allTransactions }
         return allTransactions.filter { $0.account?.id == account.id }
     }
 
-    private var currentMonthStart: Date { Date().startOfMonth }
-    private var currentMonthEnd: Date { Date().endOfMonth }
-
-    private var monthExpenses: Double {
-        StatsService.totalForPeriod(
-            transactions: filteredTransactions,
-            type: .expense,
-            startDate: currentMonthStart,
-            endDate: currentMonthEnd
-        )
-    }
-
-    private var monthIncome: Double {
-        StatsService.totalForPeriod(
-            transactions: filteredTransactions,
-            type: .income,
-            startDate: currentMonthStart,
-            endDate: currentMonthEnd
-        )
-    }
-
-    private var netBalance: Double {
-        monthIncome - monthExpenses
-    }
-
-    private var spendingTrend: Double {
-        StatsService.spendingTrend(transactions: filteredTransactions)
-    }
-
-    private var topCategoryInfo: (name: String, amount: Double)? {
-        guard let top = StatsService.topCategory(transactions: filteredTransactions, month: Date()) else {
-            return nil
-        }
-        let cat = DefaultCategories.category(withId: top.categoryId)
-        return (name: cat.displayName, amount: top.amount)
-    }
-
-    private var budgetAlerts: [(budget: Budget, spent: Double, percentage: Double)] {
-        budgets.compactMap { budget in
-            let range = budget.currentPeriodRange(startOfMonth: settings.startOfMonth)
-            let spent = filteredTransactions
-                .filter {
-                    $0.type == .expense
-                        && $0.categoryId == budget.categoryId
-                        && $0.date >= range.start
-                        && $0.date <= range.end
-                }
-                .reduce(0.0) { $0 + $1.storedAmount }
-
-            let pct = budget.storedAmount > 0 ? (spent / budget.storedAmount) * 100 : 0
-            guard pct >= 80 else { return nil }
-            return (budget: budget, spent: spent, percentage: pct)
-        }
-        .sorted { $0.percentage > $1.percentage }
-    }
-
-    private var recentTransactions: [Transaction] {
-        Array(filteredTransactions.prefix(10))
-    }
-
     var body: some View {
+        // Derive every figure once per render instead of re-scanning the
+        // transactions inside each computed property.
+        let summary = DashboardSummary.make(
+            transactions: filteredTransactions,
+            budgets: budgets,
+            startOfMonthDay: settings.startOfMonth
+        )
+
         ScrollView {
             VStack(spacing: 20) {
                 BalanceCardView(
-                    netBalance: netBalance,
-                    trend: spendingTrend,
+                    netBalance: summary.netBalance,
+                    trend: summary.spendingTrend,
                     currency: currency
                 )
 
-                statsGrid
+                statsGrid(summary)
 
-                if !budgetAlerts.isEmpty {
-                    budgetAlertsSection
+                if !summary.budgetAlerts.isEmpty {
+                    budgetAlertsSection(summary.budgetAlerts)
                 }
 
-                recentTransactionsSection
+                recentTransactionsSection(summary.recentTransactions)
             }
             .padding(24)
         }
@@ -111,7 +54,7 @@ struct DashboardView: View {
 
     // MARK: - Stats Grid
 
-    private var statsGrid: some View {
+    private func statsGrid(_ summary: DashboardSummary) -> some View {
         LazyVGrid(columns: [
             GridItem(.flexible(), spacing: 12),
             GridItem(.flexible(), spacing: 12),
@@ -120,25 +63,25 @@ struct DashboardView: View {
         ], spacing: 12) {
             StatCardView(
                 title: "Expenses",
-                value: monthExpenses.currencyFormatted(code: currency),
+                value: summary.monthExpenses.currencyFormatted(code: currency),
                 icon: "arrow.down.circle.fill",
                 color: .red
             )
             StatCardView(
                 title: "Income",
-                value: monthIncome.currencyFormatted(code: currency),
+                value: summary.monthIncome.currencyFormatted(code: currency),
                 icon: "arrow.up.circle.fill",
                 color: .green
             )
             StatCardView(
                 title: "Net",
-                value: netBalance.currencyFormatted(code: currency),
+                value: summary.netBalance.currencyFormatted(code: currency),
                 icon: "plusminus.circle.fill",
-                color: netBalance >= 0 ? .green : .red
+                color: summary.netBalance >= 0 ? .green : .red
             )
             StatCardView(
                 title: "Top Category",
-                value: topCategoryInfo?.name ?? "N/A",
+                value: summary.topCategory?.name ?? "N/A",
                 icon: "star.circle.fill",
                 color: .orange
             )
@@ -147,20 +90,20 @@ struct DashboardView: View {
 
     // MARK: - Budget Alerts
 
-    private var budgetAlertsSection: some View {
+    private func budgetAlertsSection(_ alerts: [DashboardSummary.BudgetAlert]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Label("Budget Alerts", systemImage: "exclamationmark.triangle.fill")
                 .font(.headline)
                 .foregroundStyle(.orange)
 
-            ForEach(budgetAlerts, id: \.budget.id) { alert in
-                let cat = DefaultCategories.category(withId: alert.budget.categoryId)
+            ForEach(alerts) { alert in
+                let cat = DefaultCategories.category(withId: alert.categoryId)
                 HStack {
                     Text(cat.icon)
                     Text(cat.name)
                         .font(.subheadline)
                     Spacer()
-                    Text("\(alert.spent.currencyFormatted(code: currency)) / \(alert.budget.storedAmount.currencyFormatted(code: currency))")
+                    Text("\(alert.spent.currencyFormatted(code: currency)) / \(alert.limit.currencyFormatted(code: currency))")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                     Text(String(format: "%.0f%%", alert.percentage))
@@ -190,7 +133,7 @@ struct DashboardView: View {
 
     // MARK: - Recent Transactions
 
-    private var recentTransactionsSection: some View {
+    private func recentTransactionsSection(_ recent: [Transaction]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Recent Transactions")
@@ -198,7 +141,7 @@ struct DashboardView: View {
                 Spacer()
             }
 
-            if recentTransactions.isEmpty {
+            if recent.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "tray")
                         .font(.title)
@@ -210,9 +153,9 @@ struct DashboardView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 24)
             } else {
-                ForEach(recentTransactions) { transaction in
+                ForEach(recent) { transaction in
                     dashboardTransactionRow(transaction)
-                    if transaction.id != recentTransactions.last?.id {
+                    if transaction.id != recent.last?.id {
                         Divider()
                     }
                 }
