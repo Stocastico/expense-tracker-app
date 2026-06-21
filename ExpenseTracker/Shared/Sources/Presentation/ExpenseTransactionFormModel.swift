@@ -21,6 +21,9 @@ public final class ExpenseTransactionFormModel {
     public var type: TransactionType = .expense
     public var selectedCategoryId: UUID?
     public var selectedSubcategoryId: UUID?
+    public var merchant: String = ""
+    public var descriptionText: String = ""
+    public var date: Date = Date()
 
     public private(set) var categories: [ExpenseDomain.Category] = []
     private var catalog = ExpenseDomain.Catalog(categories: [], subcategories: [])
@@ -44,6 +47,9 @@ public final class ExpenseTransactionFormModel {
             type = editing.type
             selectedCategoryId = editing.category?.id
             selectedSubcategoryId = editing.subcategory?.id
+            merchant = editing.merchant ?? ""
+            descriptionText = editing.descriptionText
+            date = editing.date
         }
     }
 
@@ -95,6 +101,10 @@ public final class ExpenseTransactionFormModel {
         transaction.type = type
         transaction.category = category
         transaction.subcategory = subcategory
+        let trimmedMerchant = merchant.trimmingCharacters(in: .whitespaces)
+        transaction.merchant = trimmedMerchant.isEmpty ? nil : trimmedMerchant
+        transaction.descriptionText = descriptionText
+        transaction.date = date
 
         let title = isEditing ? "Updating transaction" : "Saving transaction"
         guard errorPresenter.perform(title, {
