@@ -131,6 +131,99 @@ struct ExpenseTransactionsListModelTests {
 
         #expect(presenter.currentError != nil)
     }
+
+    // MARK: - Filtering, search & sort (parity with the legacy list)
+
+    @Test("searchQuery filters across merchant/description/tags; blank clears it")
+    func searchQueryFilters() {
+        let iberdrola = transaction(merchant: "Iberdrola", description: "luce", tags: ["bolletta"])
+        let eroski = transaction(merchant: "Eroski", description: "spesa", tags: ["food"])
+        let model = makeModel(with: [iberdrola, eroski])
+        model.load()
+
+        model.searchQuery = "ibe"
+        #expect(model.rows.map(\.title) == ["Iberdrola"])
+
+        model.searchQuery = "FOOD" // matches a tag, case-insensitively
+        #expect(model.rows.map(\.title) == ["Eroski"])
+
+        model.searchQuery = "   " // whitespace-only is treated as no filter
+        #expect(model.rows.count == 2)
+    }
+
+    @Test("typeFilter keeps only the chosen transaction type")
+    func typeFilters() {
+        let expense = ExpenseDomain.Transaction(amount: 10, type: .expense, merchant: "Shop")
+        let income = ExpenseDomain.Transaction(amount: 99, type: .income, merchant: "Salary")
+        let model = makeModel(with: [expense, income])
+        model.load()
+
+        model.typeFilter = .income
+        #expect(model.rows.map(\.title) == ["Salary"])
+
+        model.typeFilter = nil
+        #expect(model.rows.count == 2)
+    }
+
+    @Test("categoryFilter keeps only transactions in the given category")
+    func categoryFilters() {
+        let cibo = ExpenseDomain.Category(displayName: "Cibo")
+        let inCasa = ExpenseDomain.Transaction(amount: 1, type: .expense, merchant: "Casa", category: casa)
+        let inCibo = ExpenseDomain.Transaction(amount: 2, type: .expense, merchant: "Cibo", category: cibo)
+        let model = makeModel(with: [inCasa, inCibo])
+        model.load()
+
+        model.categoryFilter = cibo.id
+        #expect(model.rows.map(\.title) == ["Cibo"])
+    }
+
+    @Test("accountFilter keeps only transactions for the given account")
+    func accountFilters() {
+        let account = UUID()
+        let mine = ExpenseDomain.Transaction(amount: 1, type: .expense, merchant: "Mine", accountId: account)
+        let other = ExpenseDomain.Transaction(amount: 2, type: .expense, merchant: "Other", accountId: UUID())
+        let model = makeModel(with: [mine, other])
+        model.load()
+
+        model.accountFilter = account
+        #expect(model.rows.map(\.title) == ["Mine"])
+    }
+
+    @Test("date range bounds are inclusive")
+    func dateRangeFilters() {
+        func day(_ n: Int) -> Date { Date(timeIntervalSince1970: Double(n) * 86_400) }
+        let first = transaction(merchant: "First", date: day(1))
+        let second = transaction(merchant: "Second", date: day(2))
+        let third = transaction(merchant: "Third", date: day(3))
+        let model = makeModel(with: [first, second, third])
+        model.load()
+
+        model.startDate = day(2)
+        model.endDate = day(2)
+        #expect(model.rows.map(\.title) == ["Second"])
+    }
+
+    @Test("sort switches between date and amount, ascending and descending")
+    func sorts() {
+        let cheapOld = transaction(merchant: "CheapOld", amount: "5.00", date: Date(timeIntervalSince1970: 1000))
+        let dearNew = transaction(merchant: "DearNew", amount: "50.00", date: Date(timeIntervalSince1970: 2000))
+        let model = makeModel(with: [cheapOld, dearNew])
+        model.load()
+
+        // Default: newest first.
+        #expect(model.rows.map(\.title) == ["DearNew", "CheapOld"])
+
+        model.sortField = .date
+        model.sortAscending = true
+        #expect(model.rows.map(\.title) == ["CheapOld", "DearNew"])
+
+        model.sortField = .amount
+        model.sortAscending = false
+        #expect(model.rows.map(\.title) == ["DearNew", "CheapOld"])
+
+        model.sortAscending = true
+        #expect(model.rows.map(\.title) == ["CheapOld", "DearNew"])
+    }
 }
 
 /// An `ExpenseRepository` whose every operation throws — for exercising error paths.
