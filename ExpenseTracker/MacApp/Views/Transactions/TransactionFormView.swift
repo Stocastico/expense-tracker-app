@@ -45,9 +45,14 @@ struct TransactionFormView: View {
         }
     }
 
+    /// The entered amount as a strictly positive `Decimal`, understanding
+    /// European/US notation and currency symbols (the sign comes from the type).
+    private var parsedAmount: Decimal? {
+        MoneyParser.parsePositiveAmount(amount)
+    }
+
     private var isValid: Bool {
-        guard let parsedAmount = Double(amount), parsedAmount > 0 else { return false }
-        return !descriptionText.trimmingCharacters(in: .whitespaces).isEmpty
+        parsedAmount != nil && !descriptionText.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     var body: some View {
@@ -372,7 +377,8 @@ struct TransactionFormView: View {
     }
 
     private func saveTransaction() {
-        guard let parsedAmount = Double(amount), parsedAmount > 0 else { return }
+        guard let amountValue = parsedAmount else { return }
+        let amountDouble = NSDecimalNumber(decimal: amountValue).doubleValue
 
         let dataService = DataService(modelContext: modelContext)
         let tags = tagsText
@@ -382,7 +388,7 @@ struct TransactionFormView: View {
 
         if let existing = transaction {
             existing.type = transactionType
-            existing.storedAmount = parsedAmount
+            existing.storedAmount = amountDouble
             existing.currency = currency
             existing.descriptionText = descriptionText.trimmingCharacters(in: .whitespaces)
             existing.merchant = merchant.isEmpty ? nil : merchant
@@ -399,7 +405,7 @@ struct TransactionFormView: View {
         } else {
             let newTransaction = Transaction(
                 type: transactionType,
-                amount: parsedAmount,
+                amount: amountDouble,
                 currency: currency,
                 descriptionText: descriptionText.trimmingCharacters(in: .whitespaces),
                 merchant: merchant.isEmpty ? nil : merchant,

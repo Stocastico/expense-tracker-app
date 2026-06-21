@@ -94,18 +94,27 @@ under P1 → "Adopt `ExpenseRepository` end-to-end".
     repository via `BudgetSpending`/`DomainStatsService` (`Decimal`); budgets
     themselves stay legacy, so their category icon/name still come from the flat
     catalog. *(PR #37.)*
-  - **Menu-bar quick-add hardened** — its amount field now parses via
+  - **Manual & menu-bar entry hardened** — both the manual `TransactionFormView`
+    and the menu-bar quick-add now parse amounts via
     `MoneyParser.parsePositiveAmount` (European/US notation, currency symbols,
-    thousands separators) instead of a hand-rolled `Double` cast. The write still
-    goes through `DataService` and so is mirrored into the domain by the
-    write-through. *(PR #38.)*
+    thousands separators) instead of a hand-rolled `Double` cast that couldn't
+    even read a comma decimal. Writes still go through `DataService` and so are
+    mirrored into the domain by the write-through. *(PRs #38, #39.)*
 
-  All transaction *readers* now go through the repository. Remaining before the
-  legacy Transactions screen can be deleted: port the remaining *writers* — the
-  manual `TransactionFormView`, the menu-bar quick-add, and **Import Statement /
-  Scan Receipts** — to write the domain directly (the write-through covers them
-  for now), then delete the legacy screen and retire the `Double` models; plus
-  analytics grouping by the two-level catalog.
+  **All transaction *readers* now go through the repository.** What remains
+  before the legacy Transactions screen can be deleted:
+
+  - **Port the *writers* to the domain** — manual `TransactionFormView`, menu-bar
+    quick-add, and **Import Statement / Scan Receipts** currently write legacy
+    `Transaction` (reaching the domain only via the write-through). **Blocked
+    first on a domain-model gap:** `ExpenseDomain.Transaction` has no
+    `recurring*`/`receiptData` fields, so a faithful writer port would drop
+    recurring schedules and receipt images. **Next step is to model recurring +
+    receipts in the domain** (with migration), *then* swap the writers onto
+    `ExpenseRepository`.
+  - **Then** delete the legacy Transactions screen + "(beta)" label and retire
+    the `Double` `@Model` types + `DataService`.
+  - **Analytics grouping** by the two-level catalog (deferred).
 - [x] **Image pipeline (roadmap step 5).** `ReceiptImportPipeline` turns the OCR
   text of one or more receipt/invoice images into categorized `ReceiptDraft`s
   (reusing `ReceiptParser` + a `CategorizationEngine`), unit-tested with sample

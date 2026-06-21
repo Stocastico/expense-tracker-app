@@ -69,6 +69,20 @@ at the boundary; legacy String category → Italian catalog via
 `DefaultLegacyCategoryMapping`). See `TODO.md` for live status (P0 done; P1 =
 UI adoption).
 
+**UI adoption status (P1):** a **write-through bridge** keeps the domain store
+current — `DataService` mirrors every legacy add/update/delete into
+`ExpenseTransactionRecord` (PR #34). On top of it, **all transaction readers now
+go through `ExpenseRepository`**: Dashboard (`DashboardFigures`, PR #35),
+Analytics (`DomainStatsService`, PR #36) and Budgets (`BudgetSpending`, PR #37),
+all computing in `Decimal`. **Writers still write legacy** (manual
+`TransactionFormView`, menu-bar quick-add, Import/Scan) and reach the domain only
+via the bridge. Manual entry now parses amounts with
+`MoneyParser.parsePositiveAmount` (PRs #38, #39). **Porting the writers to the
+repository is blocked on the domain model**: `ExpenseDomain.Transaction` has no
+`recurring*`/`receiptData` fields, so a faithful port needs the domain to model
+recurring schedules + receipts first (otherwise that data is lost). Until then,
+keep the legacy writer + write-through.
+
 ## Dev principles (please follow without being asked)
 
 - **TDD, strictly.** Write a failing test first, push, confirm it's **RED on
