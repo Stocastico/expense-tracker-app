@@ -11,11 +11,14 @@ extension ExpenseTransactionRecord {
             amount: transaction.amount,
             date: transaction.date,
             typeRaw: transaction.type.rawValue,
+            merchant: transaction.merchant,
+            descriptionText: transaction.descriptionText,
             categoryId: transaction.category?.id,
             categoryName: transaction.category?.displayName,
             subcategoryId: transaction.subcategory?.id,
             subcategoryName: transaction.subcategory?.displayName,
             subcategoryParentId: transaction.subcategory?.parentId,
+            accountId: transaction.accountId,
             note: transaction.note,
             // Sorted for a stable on-disk representation; tags are a Set in the domain.
             tags: transaction.tags
@@ -29,11 +32,14 @@ extension ExpenseTransactionRecord {
         amount = transaction.amount
         date = transaction.date
         typeRaw = transaction.type.rawValue
+        merchant = transaction.merchant
+        descriptionText = transaction.descriptionText
         categoryId = transaction.category?.id
         categoryName = transaction.category?.displayName
         subcategoryId = transaction.subcategory?.id
         subcategoryName = transaction.subcategory?.displayName
         subcategoryParentId = transaction.subcategory?.parentId
+        accountId = transaction.accountId
         note = transaction.note
         tags = transaction.tags
             .map { StoredExpenseTag(id: $0.id, displayName: $0.displayName) }
@@ -57,9 +63,12 @@ extension ExpenseTransactionRecord {
             amount: amount,
             date: date,
             type: TransactionType(rawValue: typeRaw) ?? .expense,
+            merchant: merchant,
+            descriptionText: descriptionText,
             category: category,
             subcategory: subcategory,
             tags: Set(tags.map { ExpenseDomain.Tag(id: $0.id, displayName: $0.displayName) }),
+            accountId: accountId,
             note: note
         )
     }
