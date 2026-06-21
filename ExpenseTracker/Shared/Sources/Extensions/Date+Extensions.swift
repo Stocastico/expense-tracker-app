@@ -35,16 +35,12 @@ extension Date {
 
     /// Returns a string like "March 2026".
     public var monthYearString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM yyyy"
-        return formatter.string(from: self)
+        return FormatterCache.dateFormat("MMMM yyyy").string(from: self)
     }
 
     /// Returns a string like "14 Mar".
     public var shortDateString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "d MMM"
-        return formatter.string(from: self)
+        return FormatterCache.dateFormat("d MMM").string(from: self)
     }
 
     /// Checks whether this date falls in the same calendar month as another date.
@@ -89,14 +85,9 @@ extension Date {
         } else if calendar.isDateInYesterday(self) {
             return "Yesterday"
         } else if calendar.isDate(self, equalTo: Date(), toGranularity: .weekOfYear) {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "EEEE"
-            return formatter.string(from: self)
+            return FormatterCache.dateFormat("EEEE").string(from: self)
         } else {
-            let formatter = DateFormatter()
-            formatter.dateStyle = .medium
-            formatter.timeStyle = .none
-            return formatter.string(from: self)
+            return FormatterCache.mediumDate.string(from: self)
         }
     }
 }

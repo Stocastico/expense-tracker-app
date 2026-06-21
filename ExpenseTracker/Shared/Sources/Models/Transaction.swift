@@ -117,11 +117,7 @@ extension Transaction {
 
     /// A formatted display string for the amount with currency.
     public var formattedAmount: String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = currency
-        formatter.minimumFractionDigits = 2
-        formatter.maximumFractionDigits = 2
-        return formatter.string(from: NSNumber(value: storedAmount)) ?? String(format: "%@ %.2f", currency, storedAmount)
+        return FormatterCache.currency(code: currency).string(from: NSNumber(value: storedAmount))
+            ?? String(format: "%@ %.2f", currency, storedAmount)
     }
 }
