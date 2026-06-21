@@ -3,9 +3,13 @@ import SwiftData
 import Charts
 
 struct AnalyticsView: View {
-    @Query(sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
+    @Environment(\.expenseRepository) private var repository
+    @Environment(ExpenseErrorPresenter.self) private var errorPresenter
     @Query private var settings: [AppSettings]
 
+    /// Domain transactions read through the repository (kept current with legacy
+    /// writes by `DataService`'s write-through). Loaded on appear / account change.
+    @State private var transactions: [ExpenseDomain.Transaction] = []
     @State private var selectedMonths: Int = 6
 
     var selectedAccount: Account?
@@ -18,53 +22,59 @@ struct AnalyticsView: View {
         currentSettings?.currency ?? "USD"
     }
 
-    private var filteredTransactions: [Transaction] {
+    private var filteredTransactions: [ExpenseDomain.Transaction] {
         if let account = selectedAccount {
-            return allTransactions.filter { $0.account?.id == account.id }
+            return transactions.filter { $0.accountId == account.id }
         }
-        return allTransactions
+        return transactions
     }
 
     private var monthlyData: [MonthlyTotal] {
-        StatsService.monthlyTotals(transactions: filteredTransactions, months: selectedMonths)
+        DomainStatsService.monthlyTotals(transactions: filteredTransactions, months: selectedMonths)
     }
 
     private var balanceData: [BalancePoint] {
-        StatsService.netBalanceTrend(transactions: filteredTransactions, months: selectedMonths)
+        DomainStatsService.netBalanceTrend(transactions: filteredTransactions, months: selectedMonths)
     }
 
     private var categoryData: [CategoryBreakdown] {
-        StatsService.categoryBreakdown(transactions: filteredTransactions, month: Date())
+        DomainStatsService.categoryBreakdown(transactions: filteredTransactions, month: Date())
     }
 
     private var currentMonthIncome: Double {
-        StatsService.totalForPeriod(
+        DomainStatsService.totalForPeriod(
             transactions: filteredTransactions,
             type: .income,
             startDate: Date().startOfMonth,
             endDate: Date().endOfMonth
-        )
+        ).doubleValue
     }
 
     private var currentMonthExpenses: Double {
-        StatsService.totalForPeriod(
+        DomainStatsService.totalForPeriod(
             transactions: filteredTransactions,
             type: .expense,
             startDate: Date().startOfMonth,
             endDate: Date().endOfMonth
-        )
+        ).doubleValue
     }
 
     private var trend: Double {
-        StatsService.spendingTrend(transactions: filteredTransactions)
+        DomainStatsService.spendingTrend(transactions: filteredTransactions)
     }
 
     private var prediction: Double {
-        StatsService.spendingPrediction(transactions: filteredTransactions)
+        DomainStatsService.spendingPrediction(transactions: filteredTransactions)
     }
 
     private var savingsRateValue: Double {
         StatsService.savingsRate(income: currentMonthIncome, expenses: currentMonthExpenses)
+    }
+
+    private func load() {
+        if let loaded = errorPresenter.perform("Loading analytics", { try repository.transactions() }) {
+            transactions = loaded
+        }
     }
 
     var body: some View {
@@ -88,6 +98,8 @@ struct AnalyticsView: View {
             .padding()
         }
         .navigationTitle("Analytics")
+        .task { load() }
+        .onChange(of: selectedAccount?.id) { _, _ in load() }
     }
 
     private var headerSection: some View {
@@ -152,4 +164,8 @@ struct AnalyticsView: View {
             .padding(.vertical, 4)
         }
     }
+}
+
+private extension Decimal {
+    var doubleValue: Double { NSDecimalNumber(decimal: self).doubleValue }
 }
