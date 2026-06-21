@@ -14,35 +14,40 @@ Two parallel data models currently coexist:
   Transaction}` — two-level categories, tags, money as `Decimal`, behind
   `ExpenseRepository`.
 
-The single biggest decision for "fully working" is **whether/how to converge
-these two**. Everything below is grouped by priority.
+The single biggest decision for "fully working" was **whether/how to converge
+these two**. **That path is now chosen:** adopt `ExpenseRepository` in the UI
+incrementally and retire the legacy `Double` math over time. As of 2026-06 the
+supporting correctness work is done (PRs #15–#18) — legacy data migrates into
+the new domain on launch — and what remains is consuming the new layer in the
+views. Everything below is grouped by priority.
 
 ---
 
-## P0 — correctness & convergence (do first)
+## P0 — correctness & convergence — ✅ done (PRs #15–#18)
 
-- [ ] **Money precision.** Storage and all aggregation use `Double`
-  (`Transaction.storedAmount`, `Budget.storedAmount`, every `StatsService`
-  `reduce(0.0)`). The `amount: Decimal` accessors are derived *from* the
-  `Double`, so they don't actually buy precision — float error accumulates in
-  the sums before conversion. Fix by storing money as integer **minor units**
-  (`Int`, cents) or `Decimal`, and doing all math in `Decimal`.
-  Refs: `Shared/Sources/Models/Transaction.swift`,
-  `Shared/Sources/Models/Budget.swift:46`,
-  `Shared/Sources/Services/StatsService.swift` (throughout).
-- [ ] **Pick a convergence path for the two models.** Options:
-  1. Adopt `ExpenseRepository` in the UI incrementally (recommended) and retire
-     the legacy `Double` math over time; or
-  2. Backport the domain's `Decimal` + two-level categories onto the existing
-     `Transaction`/`Category` and drop the new layer.
-  Until this is decided the new domain is dead weight in the running app.
-- [ ] **Data migration.** Whatever path is chosen, write a one-time migration:
-  legacy `Transaction` → `ExpenseTransactionRecord` (or legacy money `Double` →
-  minor units). Add a migration test.
-- [ ] **Surface errors to the user.** Data/save failures are swallowed with
-  `print(...)` (`DataService.swift` `saveContext`, all `fetch*`). At minimum
-  show a non-fatal alert; never `fatalError` on container creation in a shipped
-  app (`ExpenseTrackerApp.swift:34`) — present a recovery UI instead.
+The remaining open work here is consuming the new layer in the UI, tracked
+under P1 → "Adopt `ExpenseRepository` end-to-end".
+
+- [x] **Money precision (new path).** The `ExpenseDomain` model and its
+  SwiftData records store and aggregate money as `Decimal` end-to-end, and the
+  legacy→domain migration rounds the old `Double` amounts to a 2-dp `Decimal`
+  at the boundary, so float error doesn't leak into the new model. *(PR #15.)*
+  The legacy live models still store `Double`; that storage retires together
+  with the UI adoption above rather than as a separate fix.
+- [x] **Convergence path chosen.** Adopt `ExpenseRepository` in the UI
+  incrementally (option 1). The new domain is no longer dead weight now that
+  data migrates into it on launch.
+- [x] **Data migration.** `LegacyExpenseMigration` maps legacy `Transaction` →
+  `ExpenseDomain.Transaction` (Double→Decimal, merchant/description/account,
+  tags, category via `DefaultLegacyCategoryMapping`); `LegacyExpenseMigrationRunner`
+  writes `ExpenseTransactionRecord`s idempotently and runs on launch after
+  seeding. Fully tested, including a seed/migrate drift guard. *(PRs #15–#17.)*
+- [x] **Surface errors to the user (new path).** `ExpenseErrorPresenter` +
+  `ExpensePresentableError` route setup/persistence failures into a SwiftUI
+  alert; the `ModelContainer`-creation `fatalError` is replaced with a graceful
+  in-memory fallback that tells the user changes won't be saved. *(PR #18.)*
+  The legacy `DataService` still uses `print(...)` on its own save/fetch path —
+  fold those into the presenter as the UI adopts the repository.
 
 ## P1 — performance
 
@@ -122,9 +127,14 @@ these two**. Everything below is grouped by priority.
 
 See the companion review in the PR/notes. Highest-impact items, in order:
 
-1. **Money is `Double` end-to-end** (P0 above) — precision risk on sums/budgets.
+1. ✅ **Money is `Double` end-to-end** — fixed on the new domain/migration path
+   (Decimal end-to-end + Double→Decimal at migration, PR #15); legacy `Double`
+   storage retires with UI adoption.
 2. **`DataService.fetchTransactions` is O(all) in memory** (P1) — no predicates.
 3. **Formatters allocated per call in row rendering** (P1).
-4. **Errors swallowed via `print` / `fatalError` on launch** (P0).
-5. **New `ExpenseDomain` injected but unused** — decide convergence (P0).
+4. ✅ **Errors swallowed via `print` / `fatalError` on launch** — fixed on the
+   new path (PR #18): presenter + alert, `fatalError` replaced; legacy
+   `DataService` `print(...)` remains until UI adoption.
+5. ✅ **New `ExpenseDomain` injected but unused** — convergence decided and data
+   now migrates into it on launch (PRs #15–#18); UI consumption pending (P1).
 6. **`MenuBarQuickAdd` money parsing diverges from `MoneyParser`** (P2).

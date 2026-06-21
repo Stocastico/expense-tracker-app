@@ -205,6 +205,9 @@ CI runs the same on a macOS runner for every push
 | `PDFImportTests` | Bank statement text parsing |
 | `SmartCategoryTests` | Keyword matching, merchant priority, fallback |
 | `SpanishMerchantCategoryTests` | Auto-categorising real Spanish/Basque merchants (Eroski, Vueling, Cicar, Mugi, Bidegi, farmacia, nómina…) |
+| `ExpenseRepositoryTests` · `SwiftDataExpenseRepositoryTests` | Two-level `ExpenseDomain` repository (in-memory + SwiftData) round-trip & validation |
+| `LegacyExpenseMigrationTests` · `LegacyExpenseMigrationRunnerTests` · `DefaultLegacyCategoryMappingTests` | Legacy→domain migration: `Double`→`Decimal`, category mapping, idempotent runner, seed/migrate drift guard |
+| `ExpenseErrorPresenterTests` | Error→message mapping and the surfacing presenter |
 
 ---
 
@@ -234,6 +237,11 @@ CI runs the same on a macOS runner for every push
 - **macOS-only**, no external dependencies — only Apple system frameworks
   (SwiftUI, SwiftData, Charts, Vision, PDFKit, and Foundation Models later).
 - **Decimal for money** — precise parsing via `MoneyParser`.
+- **Pure domain + migration** — a SwiftData-independent `ExpenseDomain`
+  (two-level categories, tags, `Decimal` money) sits behind `ExpenseRepository`.
+  Legacy `Transaction` data migrates into it on launch via
+  `LegacyExpenseMigrationRunner` (idempotent, `Double`→`Decimal` at the
+  boundary). Consuming this layer in the views is in progress.
 - **XcodeGen** — `project.yml` is the source of truth; `.xcodeproj` is
   git-ignored and regenerated locally.
 - **Testable AI boundary** — the categorisation engine is abstracted so the
