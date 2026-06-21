@@ -67,11 +67,14 @@ public final class ExpenseTransactionRecord {
     public var amount: Decimal
     public var date: Date
     public var typeRaw: String
+    public var merchant: String?
+    public var descriptionText: String
     public var categoryId: UUID?
     public var categoryName: String?
     public var subcategoryId: UUID?
     public var subcategoryName: String?
     public var subcategoryParentId: UUID?
+    public var accountId: UUID?
     public var note: String
     public var tags: [StoredExpenseTag]
 
@@ -80,11 +83,14 @@ public final class ExpenseTransactionRecord {
         amount: Decimal,
         date: Date,
         typeRaw: String,
+        merchant: String?,
+        descriptionText: String,
         categoryId: UUID?,
         categoryName: String?,
         subcategoryId: UUID?,
         subcategoryName: String?,
         subcategoryParentId: UUID?,
+        accountId: UUID?,
         note: String,
         tags: [StoredExpenseTag]
     ) {
@@ -92,11 +98,14 @@ public final class ExpenseTransactionRecord {
         self.amount = amount
         self.date = date
         self.typeRaw = typeRaw
+        self.merchant = merchant
+        self.descriptionText = descriptionText
         self.categoryId = categoryId
         self.categoryName = categoryName
         self.subcategoryId = subcategoryId
         self.subcategoryName = subcategoryName
         self.subcategoryParentId = subcategoryParentId
+        self.accountId = accountId
         self.note = note
         self.tags = tags
     }

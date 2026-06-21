@@ -24,9 +24,16 @@ extension ExpenseDomain {
         public var amount: Decimal
         public var date: Date
         public var type: TransactionType
+        /// Payee / merchant, if known.
+        public var merchant: String?
+        /// Human-readable description, distinct from the free-text `note`.
+        public var descriptionText: String
         public var category: Category?
         public var subcategory: Subcategory?
         public var tags: Set<Tag>
+        /// The owning account, referenced by id (the domain does not depend on
+        /// the SwiftData `Account` type).
+        public var accountId: UUID?
         public var note: String
 
         public init(
@@ -34,18 +41,24 @@ extension ExpenseDomain {
             amount: Decimal,
             date: Date = Date(),
             type: TransactionType,
+            merchant: String? = nil,
+            descriptionText: String = "",
             category: Category? = nil,
             subcategory: Subcategory? = nil,
             tags: Set<Tag> = [],
+            accountId: UUID? = nil,
             note: String = ""
         ) {
             self.id = id
             self.amount = amount
             self.date = date
             self.type = type
+            self.merchant = merchant
+            self.descriptionText = descriptionText
             self.category = category
             self.subcategory = subcategory
             self.tags = tags
+            self.accountId = accountId
             self.note = note
         }
 
