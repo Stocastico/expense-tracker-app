@@ -9,6 +9,16 @@ import Observation
 @Observable
 public final class ExpenseTransactionFormModel {
 
+    /// A selectable account, as a plain value so the form stays free of SwiftData.
+    public struct AccountOption: Identifiable, Equatable, Sendable {
+        public let id: UUID
+        public let name: String
+        public init(id: UUID, name: String) {
+            self.id = id
+            self.name = name
+        }
+    }
+
     private let repository: any ExpenseRepository
     private let errorPresenter: ExpenseErrorPresenter
     private let onSaved: () -> Void
@@ -24,8 +34,13 @@ public final class ExpenseTransactionFormModel {
     public var merchant: String = ""
     public var descriptionText: String = ""
     public var date: Date = Date()
+    public var selectedTagIds: Set<UUID> = []
+    public var selectedAccountId: UUID?
 
     public private(set) var categories: [ExpenseDomain.Category] = []
+    public private(set) var availableTags: [ExpenseDomain.Tag] = []
+    /// The accounts available to assign, provided by the caller.
+    public let accounts: [AccountOption]
     private var catalog = ExpenseDomain.Catalog(categories: [], subcategories: [])
 
     /// Whether the form is editing an existing transaction (vs adding a new one).
@@ -35,11 +50,13 @@ public final class ExpenseTransactionFormModel {
         repository: any ExpenseRepository,
         errorPresenter: ExpenseErrorPresenter,
         editing: ExpenseDomain.Transaction? = nil,
+        accounts: [AccountOption] = [],
         onSaved: @escaping () -> Void = {}
     ) {
         self.repository = repository
         self.errorPresenter = errorPresenter
         self.editingTransaction = editing
+        self.accounts = accounts
         self.onSaved = onSaved
 
         if let editing {
@@ -50,6 +67,8 @@ public final class ExpenseTransactionFormModel {
             merchant = editing.merchant ?? ""
             descriptionText = editing.descriptionText
             date = editing.date
+            selectedTagIds = Set(editing.tags.map(\.id))
+            selectedAccountId = editing.accountId
         }
     }
 
@@ -62,6 +81,9 @@ public final class ExpenseTransactionFormModel {
         }
         self.catalog = catalog
         self.categories = catalog.categories
+        if let tags = errorPresenter.perform("Loading tags", { try repository.tags() }) {
+            self.availableTags = tags
+        }
     }
 
     /// Subcategories of the selected category — empty for income (which is not
@@ -105,6 +127,14 @@ public final class ExpenseTransactionFormModel {
         transaction.merchant = trimmedMerchant.isEmpty ? nil : trimmedMerchant
         transaction.descriptionText = descriptionText
         transaction.date = date
+        // Resolve selected ids against the available tags plus any already on the
+        // edited transaction, so editing never drops a tag that isn't in the seed.
+        var tagsById: [UUID: ExpenseDomain.Tag] = [:]
+        for tag in availableTags + (editingTransaction?.tags.map { $0 } ?? []) {
+            tagsById[tag.id] = tag
+        }
+        transaction.tags = Set(selectedTagIds.compactMap { tagsById[$0] })
+        transaction.accountId = selectedAccountId
 
         let title = isEditing ? "Updating transaction" : "Saving transaction"
         guard errorPresenter.perform(title, {
