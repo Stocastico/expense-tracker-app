@@ -114,6 +114,56 @@ struct ExpenseTransactionFormModelTests {
         #expect(ExpenseTransactionFormModel.parseAmount(model.amountText) == Decimal(string: "10.00")!)
     }
 
+    @Test("Saving stores merchant, description and date")
+    func savesOptionalDetails() throws {
+        let (model, repository, _) = makeModel()
+        model.type = .income
+        model.amountText = "100"
+        model.merchant = "Acme"
+        model.descriptionText = "March invoice"
+        let date = Date(timeIntervalSince1970: 1_000_000)
+        model.date = date
+
+        #expect(model.save())
+        let stored = try repository.transactions()[0]
+        #expect(stored.merchant == "Acme")
+        #expect(stored.descriptionText == "March invoice")
+        #expect(stored.date == date)
+    }
+
+    @Test("A blank merchant is stored as nil")
+    func blankMerchantIsNil() throws {
+        let (model, repository, _) = makeModel()
+        model.type = .income
+        model.amountText = "10"
+        model.merchant = "   "
+
+        #expect(model.save())
+        #expect(try repository.transactions()[0].merchant == nil)
+    }
+
+    @Test("Editing prefills merchant, description and date")
+    func editingPrefillsDetails() {
+        let repository = ExpenseDomain.InMemoryRepository.seeded()
+        let date = Date(timeIntervalSince1970: 2_000_000)
+        let original = ExpenseDomain.Transaction(
+            amount: Decimal(string: "5.00")!,
+            date: date,
+            type: .expense,
+            merchant: "Shop",
+            descriptionText: "stuff"
+        )
+        let model = ExpenseTransactionFormModel(
+            repository: repository,
+            errorPresenter: ExpenseErrorPresenter(),
+            editing: original
+        )
+        model.load()
+        #expect(model.merchant == "Shop")
+        #expect(model.descriptionText == "stuff")
+        #expect(model.date == date)
+    }
+
     @Test("Editing updates in place and preserves untouched fields")
     func editingPreservesUntouchedFields() throws {
         let repository = ExpenseDomain.InMemoryRepository.seeded()

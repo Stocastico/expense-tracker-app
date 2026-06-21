@@ -50,6 +50,12 @@ struct AddDomainTransactionView: View {
             }
             .pickerStyle(.segmented)
 
+            TextField("Merchant", text: $model.merchant)
+                .textFieldStyle(.roundedBorder)
+            TextField("Description", text: $model.descriptionText)
+                .textFieldStyle(.roundedBorder)
+            DatePicker("Date", selection: $model.date, displayedComponents: .date)
+
             if model.type == .expense {
                 Picker("Category", selection: $model.selectedCategoryId) {
                     Text("None").tag(UUID?.none)
