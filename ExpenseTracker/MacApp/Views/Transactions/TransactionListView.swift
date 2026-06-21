@@ -16,6 +16,7 @@ struct TransactionListView: View {
     @State private var sortAscending = false
     @State private var showingAddSheet = false
     @State private var showingPDFImport = false
+    @State private var showingReceiptScan = false
     @State private var selectedTransaction: Transaction? = nil
     @State private var transactionToDelete: Transaction? = nil
     @State private var showDeleteConfirmation = false
@@ -113,6 +114,12 @@ struct TransactionListView: View {
                 }
 
                 Button {
+                    showingReceiptScan = true
+                } label: {
+                    Label("Scan Receipts", systemImage: "doc.viewfinder")
+                }
+
+                Button {
                     selectedTransaction = nil
                     showingAddSheet = true
                 } label: {
@@ -130,6 +137,10 @@ struct TransactionListView: View {
         }
         .sheet(isPresented: $showingPDFImport) {
             PDFImportView(currency: currency)
+                .frame(minWidth: 600, minHeight: 500)
+        }
+        .sheet(isPresented: $showingReceiptScan) {
+            ReceiptScanImportView(currency: currency)
                 .frame(minWidth: 600, minHeight: 500)
         }
         .confirmationDialog(
