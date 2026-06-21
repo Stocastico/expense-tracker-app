@@ -6,13 +6,8 @@ extension Decimal {
     /// - Parameter code: An ISO 4217 currency code (e.g., "EUR", "USD").
     /// - Returns: A localized currency string, or a fallback if formatting fails.
     public func currencyFormatted(code: String = "EUR") -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = code
-        formatter.minimumFractionDigits = 2
-        formatter.maximumFractionDigits = 2
         let nsDecimal = self as NSDecimalNumber
-        return formatter.string(from: nsDecimal) ?? "\(code) \(self)"
+        return FormatterCache.currency(code: code).string(from: nsDecimal) ?? "\(code) \(self)"
     }
 
     /// Returns the absolute value of this decimal.
@@ -27,11 +22,6 @@ extension Double {
     /// - Parameter code: An ISO 4217 currency code (e.g., "EUR", "USD").
     /// - Returns: A localized currency string, or a fallback if formatting fails.
     public func currencyFormatted(code: String = "EUR") -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = code
-        formatter.minimumFractionDigits = 2
-        formatter.maximumFractionDigits = 2
-        return formatter.string(from: NSNumber(value: self)) ?? "\(code) \(self)"
+        return FormatterCache.currency(code: code).string(from: NSNumber(value: self)) ?? "\(code) \(self)"
     }
 }

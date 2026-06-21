@@ -1,0 +1,50 @@
+import Foundation
+
+/// Cached `NumberFormatter` / `DateFormatter` instances.
+///
+/// Formatters are expensive to allocate, and Foundation formatters are safe to
+/// share for formatting (read-only use of `string(from:)`), so reuse them
+/// instead of creating one per call — these were previously allocated on every
+/// list-row render. Access to the caches is serialised with a lock.
+public enum FormatterCache {
+    private static let lock = NSLock()
+    private static var currencyByCode: [String: NumberFormatter] = [:]
+    private static var byDateFormat: [String: DateFormatter] = [:]
+
+    /// A currency formatter (2 fraction digits) for the given ISO 4217 code.
+    public static func currency(code: String) -> NumberFormatter {
+        lock.lock()
+        defer { lock.unlock() }
+        if let existing = currencyByCode[code] {
+            return existing
+        }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = code
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        currencyByCode[code] = formatter
+        return formatter
+    }
+
+    /// A `DateFormatter` for the given `dateFormat` pattern.
+    public static func dateFormat(_ format: String) -> DateFormatter {
+        lock.lock()
+        defer { lock.unlock() }
+        if let existing = byDateFormat[format] {
+            return existing
+        }
+        let formatter = DateFormatter()
+        formatter.dateFormat = format
+        byDateFormat[format] = formatter
+        return formatter
+    }
+
+    /// A medium-date / no-time formatter.
+    public static let mediumDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter
+    }()
+}
