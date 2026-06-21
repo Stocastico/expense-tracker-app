@@ -97,6 +97,30 @@ struct ExpenseTransactionsListModelTests {
         #expect(model.rows.isEmpty)
         #expect(presenter.currentError != nil)
     }
+
+    @Test("delete() removes the transaction from the repository and the rows")
+    func deleteRemovesTransaction() throws {
+        let txn = transaction(merchant: "Eroski")
+        let repo = ExpenseDomain.InMemoryRepository(transactions: [txn])
+        let model = ExpenseTransactionsListModel(repository: repo, errorPresenter: ExpenseErrorPresenter())
+        model.load()
+        #expect(model.rows.count == 1)
+
+        model.delete(id: txn.id)
+
+        #expect(model.rows.isEmpty)
+        #expect(try repo.transactions().isEmpty)
+    }
+
+    @Test("A delete failure routes to the presenter")
+    func deleteFailureSurfaces() {
+        let presenter = ExpenseErrorPresenter()
+        let model = ExpenseTransactionsListModel(repository: FailingRepository(), errorPresenter: presenter)
+
+        model.delete(id: UUID())
+
+        #expect(presenter.currentError != nil)
+    }
 }
 
 /// An `ExpenseRepository` whose every operation throws — for exercising error paths.

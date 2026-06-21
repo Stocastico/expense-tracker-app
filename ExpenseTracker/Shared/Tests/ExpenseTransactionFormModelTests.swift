@@ -99,4 +99,53 @@ struct ExpenseTransactionFormModelTests {
         _ = model.save()
         #expect(saved)
     }
+
+    @Test("Editing prefills the amount in a parseable form")
+    func editingPrefillsAmount() throws {
+        let repository = ExpenseDomain.InMemoryRepository.seeded()
+        let original = ExpenseDomain.Transaction(amount: Decimal(string: "10.00")!, type: .expense)
+        let model = ExpenseTransactionFormModel(
+            repository: repository,
+            errorPresenter: ExpenseErrorPresenter(),
+            editing: original
+        )
+        model.load()
+        #expect(model.type == .expense)
+        #expect(ExpenseTransactionFormModel.parseAmount(model.amountText) == Decimal(string: "10.00")!)
+    }
+
+    @Test("Editing updates in place and preserves untouched fields")
+    func editingPreservesUntouchedFields() throws {
+        let repository = ExpenseDomain.InMemoryRepository.seeded()
+        let presenter = ExpenseErrorPresenter()
+        let casa = try #require(try repository.catalog().categories.first { $0.displayName == "Casa" })
+        let original = ExpenseDomain.Transaction(
+            amount: Decimal(string: "10.00")!,
+            type: .expense,
+            merchant: "Iberdrola",
+            descriptionText: "luce",
+            category: casa,
+            tags: [ExpenseDomain.Tag(displayName: "casa")],
+            note: "keep me"
+        )
+        try repository.addTransaction(original)
+
+        let model = ExpenseTransactionFormModel(repository: repository, errorPresenter: presenter, editing: original)
+        model.load()
+        #expect(model.selectedCategoryId == casa.id)
+        model.amountText = "25,00"
+
+        #expect(model.save())
+
+        let stored = try repository.transactions()
+        #expect(stored.count == 1) // updated, not added
+        let updated = stored[0]
+        #expect(updated.id == original.id)
+        #expect(updated.amount == Decimal(string: "25.00")!)
+        #expect(updated.merchant == "Iberdrola")
+        #expect(updated.descriptionText == "luce")
+        #expect(updated.note == "keep me")
+        #expect(updated.tags.map(\.displayName) == ["casa"])
+        #expect(presenter.currentError == nil)
+    }
 }
