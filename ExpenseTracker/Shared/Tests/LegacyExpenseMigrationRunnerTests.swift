@@ -43,6 +43,34 @@ struct LegacyExpenseMigrationRunnerTests {
         #expect(income.categoryName == nil) // income is never categorized
     }
 
+    @Test("After seed + migrate, a migrated record's category lines up with the seeded catalog")
+    func migratedRecordsLineUpWithSeededCatalog() throws {
+        let schema = Schema(
+            ExpenseSwiftDataSchema.models
+                + [Transaction.self, Account.self, Budget.self, AppSettings.self, CategoryRule.self]
+        )
+        let container = try ModelContainer(
+            for: schema,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = ModelContext(container)
+        let repository = SwiftDataExpenseRepository(context: context)
+
+        context.insert(Transaction(type: .expense, amount: 9.99, merchant: "Gift Shop", categoryId: "gifts"))
+        try context.save()
+
+        try repository.seedDefaultsIfEmpty()
+        try LegacyExpenseMigrationRunner.run(in: context)
+
+        let record = try #require(
+            try context.fetch(FetchDescriptor<ExpenseTransactionRecord>()).first { $0.merchant == "Gift Shop" }
+        )
+        let shopping = try #require(repository.catalog().categories.first { $0.displayName == "Shopping" })
+        // The resolver's category id must equal the persisted seeded category id.
+        #expect(record.categoryId == shopping.id)
+        #expect(record.subcategoryName == "regali")
+    }
+
     @Test("Running twice does not duplicate records")
     func isIdempotentAcrossRuns() throws {
         let context = try makeContext()

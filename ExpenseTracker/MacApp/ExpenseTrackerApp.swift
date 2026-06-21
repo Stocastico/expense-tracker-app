@@ -44,6 +44,7 @@ struct ExpenseTrackerApp: App {
                 .onAppear {
                     createDefaultAccountsIfNeeded()
                     seedExpenseCatalogIfNeeded()
+                    migrateLegacyTransactionsIfNeeded()
                 }
         }
         .windowStyle(.titleBar)
@@ -78,5 +79,14 @@ struct ExpenseTrackerApp: App {
     @MainActor
     private func seedExpenseCatalogIfNeeded() {
         try? expenseRepository.seedDefaultsIfEmpty()
+    }
+
+    /// Migrates any legacy `Transaction` rows into the new domain's records.
+    /// Runs after the catalog is seeded so migrated transactions reference the
+    /// seeded categories. Idempotent — already-migrated transactions are skipped,
+    /// so it is safe to run on every launch.
+    @MainActor
+    private func migrateLegacyTransactionsIfNeeded() {
+        try? LegacyExpenseMigrationRunner.run(in: modelContainer.mainContext)
     }
 }
