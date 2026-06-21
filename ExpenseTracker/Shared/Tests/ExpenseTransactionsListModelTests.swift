@@ -203,6 +203,20 @@ struct ExpenseTransactionsListModelTests {
         #expect(model.rows.map(\.title) == ["Second"])
     }
 
+    @Test("load() surfaces the catalog's top-level categories for the filter picker")
+    func loadsCategories() {
+        let cibo = ExpenseDomain.Category(displayName: "Cibo")
+        let repo = ExpenseDomain.InMemoryRepository(
+            catalog: ExpenseDomain.Catalog(categories: [casa, cibo], subcategories: []),
+            transactions: []
+        )
+        let model = ExpenseTransactionsListModel(repository: repo, errorPresenter: ExpenseErrorPresenter())
+
+        model.load()
+
+        #expect(model.categories.map(\.displayName) == ["Casa", "Cibo"])
+    }
+
     @Test("sort switches between date and amount, ascending and descending")
     func sorts() {
         let cheapOld = transaction(merchant: "CheapOld", amount: "5.00", date: Date(timeIntervalSince1970: 1000))

@@ -49,6 +49,9 @@ public final class ExpenseTransactionsListModel {
     /// Sort direction (default: descending — newest / largest first).
     public var sortAscending: Bool = false
 
+    /// Top-level categories from the catalog, for the category filter picker.
+    public private(set) var categories: [ExpenseDomain.Category] = []
+
     /// The domain transactions behind the rows, kept so a row can be opened for editing.
     private var loadedTransactions: [ExpenseDomain.Transaction] = []
 
@@ -77,6 +80,12 @@ public final class ExpenseTransactionsListModel {
             return
         }
         loadedTransactions = transactions
+
+        if let catalog = errorPresenter.perform("Loading categories", {
+            try repository.catalog()
+        }) {
+            categories = catalog.categories
+        }
     }
 
     /// Deletes a transaction and reloads. Failures are surfaced.
