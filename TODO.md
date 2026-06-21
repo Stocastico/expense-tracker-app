@@ -87,12 +87,14 @@ under P1 → "Adopt `ExpenseRepository` end-to-end".
   - **Dashboard migrated** — reads `ExpenseDomain.Transaction`s through the
     repository and derives its figures via `DashboardFigures` (money as
     `Decimal`); legacy `DashboardSummary` retired. *(PR #35.)*
+  - **Analytics migrated** — charts/summary read through the repository and are
+    computed by `DomainStatsService` (sums in `Decimal`, category slices get a
+    palette colour). *(PR #36.)*
 
   Still to do before the legacy Transactions screen can be deleted: migrate the
-  remaining readers (**Analytics, Budgets, menu-bar quick-add**) onto the
-  repository, port the **Import Statement / Scan Receipts** writers to the
-  domain, then delete the legacy screen; plus analytics grouping by the
-  two-level catalog.
+  remaining readers (**Budgets, menu-bar quick-add**) onto the repository, port
+  the **Import Statement / Scan Receipts** writers to the domain, then delete the
+  legacy screen; plus analytics grouping by the two-level catalog.
 - [x] **Image pipeline (roadmap step 5).** `ReceiptImportPipeline` turns the OCR
   text of one or more receipt/invoice images into categorized `ReceiptDraft`s
   (reusing `ReceiptParser` + a `CategorizationEngine`), unit-tested with sample
