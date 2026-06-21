@@ -49,27 +49,34 @@ under P1 → "Adopt `ExpenseRepository` end-to-end".
   The legacy `DataService` still uses `print(...)` on its own save/fetch path —
   fold those into the presenter as the UI adopts the repository.
 
-## P1 — performance
+## P1 — performance — ✅ done (PRs #26–#28)
 
-- [ ] **Cache formatters.** `NumberFormatter`/`DateFormatter` are allocated on
-  every call inside list/row rendering — expensive at scale.
-  Refs: `Extensions/Decimal+Extensions.swift:9,30`,
-  `Extensions/Date+Extensions.swift:38,45,92,96`,
-  `Models/Transaction.swift:120`. Use cached statics keyed by currency/locale.
-- [ ] **Filter/sort in the query, not in memory.** `DataService.fetchTransactions`
-  fetches *all* transactions and filters/sorts in Swift
-  (`DataService.swift:54–112`). Push predicates + sort into `FetchDescriptor`
-  (`#Predicate`, `sortBy:`) and paginate. Same pattern in `DashboardView`
-  (`@Query` all, then repeated in-memory passes).
-- [ ] **Avoid recomputing derived values per render.** Dashboard computes
-  `filteredTransactions` repeatedly and recomputes stats on every body eval;
-  memoize or move into an `@Observable` view model.
+- [x] **Cache formatters.** `FormatterCache` reuses `NumberFormatter`/
+  `DateFormatter` instances (keyed by currency code / pattern) instead of
+  allocating per call; `Decimal`/`Double.currencyFormatted`,
+  `Transaction.formattedAmount` and the `Date` string helpers route through it.
+  *(PR #26.)*
+- [x] **Filter/sort in the query, not in memory.** `DataService.fetchTransactions`
+  now builds a `FetchDescriptor` with a `#Predicate` (type/category/date) and a
+  `SortDescriptor` (date/amount); only the relationship (account) and substring
+  (search) filters run in memory, on the reduced set. Characterized by
+  `DataServiceTests`. *(PR #27.)* The `DashboardView` rescans are addressed
+  below.
+- [x] **Avoid recomputing derived values per render.** `DashboardSummary.make`
+  derives all dashboard figures in one pass; `DashboardView` builds it once per
+  render instead of recomputing `filteredTransactions` + stats in every computed
+  property. *(PR #28.)*
 
 ## P1 — feature completeness (per README/roadmap)
 
-- [ ] **Two-level categories + tags in the UI.** The new model supports
-  subcategories and tags; no screen exposes them yet (category pickers, forms,
-  filters, analytics grouping).
+- [x] **Adopt `ExpenseRepository` end-to-end** — the **"Expenses (beta)"**
+  screen reads and writes transactions through `@Environment(\.expenseRepository)`
+  (list, add, edit, delete) via `@Observable` view models. *(PRs #21–#25.)*
+- [~] **Two-level categories + tags in the UI.** Exposed on the new Expenses
+  screen (category/subcategory pickers, tag toggles, account; category-path +
+  tags shown in the list). *(PRs #21–#25.)* Still to do: analytics grouping by
+  the two-level catalog, and retiring the legacy flat-category Transactions
+  screen once the new one is at full parity.
 - [ ] **Image pipeline (roadmap step 5).** Receipt OCR is wired in the manual
   form (`TransactionFormView` → `OCRService`/`ReceiptParser`); finish the
   broader pipeline (batch/invoice images reusing the statement parser + the
@@ -78,9 +85,6 @@ under P1 → "Adopt `ExpenseRepository` end-to-end".
   is gated behind `@available(macOS 26, *)`/`#if canImport(FoundationModels)`
   and unvalidated on a real macOS 26 toolchain. Validate, and add a runtime
   fallback path test.
-- [ ] **Adopt `ExpenseRepository` end-to-end** in at least one feature
-  (e.g. a category picker or a new-transaction flow) reading/writing via
-  `@Environment(\.expenseRepository)` to prove the integration in UI.
 
 ## P2 — UX / UI
 
@@ -130,8 +134,10 @@ See the companion review in the PR/notes. Highest-impact items, in order:
 1. ✅ **Money is `Double` end-to-end** — fixed on the new domain/migration path
    (Decimal end-to-end + Double→Decimal at migration, PR #15); legacy `Double`
    storage retires with UI adoption.
-2. **`DataService.fetchTransactions` is O(all) in memory** (P1) — no predicates.
-3. **Formatters allocated per call in row rendering** (P1).
+2. ✅ **`DataService.fetchTransactions` is O(all) in memory** — predicate + sort
+   pushed into the `FetchDescriptor` (PR #27).
+3. ✅ **Formatters allocated per call in row rendering** — `FormatterCache`
+   reuses them (PR #26).
 4. ✅ **Errors swallowed via `print` / `fatalError` on launch** — fixed on the
    new path (PR #18): presenter + alert, `fatalError` replaced; legacy
    `DataService` `print(...)` remains until UI adoption.
