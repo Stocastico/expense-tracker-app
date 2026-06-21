@@ -4,6 +4,7 @@ import SwiftData
 enum SidebarItem: String, CaseIterable, Identifiable {
     case dashboard = "Dashboard"
     case transactions = "Transactions"
+    case expensesBeta = "Expenses (beta)"
     case analytics = "Analytics"
     case budgets = "Budgets"
     case settings = "Settings"
@@ -14,6 +15,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         switch self {
         case .dashboard: return "house.fill"
         case .transactions: return "list.bullet"
+        case .expensesBeta: return "sparkles"
         case .analytics: return "chart.bar.fill"
         case .budgets: return "target"
         case .settings: return "gear"
@@ -49,6 +51,8 @@ struct ContentView: View {
             DashboardView(selectedAccount: selectedAccount)
         case .transactions:
             TransactionListView(selectedAccount: selectedAccount)
+        case .expensesBeta:
+            DomainTransactionsView()
         case .analytics:
             AnalyticsView(selectedAccount: selectedAccount)
         case .budgets:
