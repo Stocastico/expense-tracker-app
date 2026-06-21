@@ -3,10 +3,14 @@ import SwiftData
 
 struct BudgetsView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.expenseRepository) private var repository
+    @Environment(ExpenseErrorPresenter.self) private var errorPresenter
     @Query(sort: \Budget.createdAt) private var budgets: [Budget]
-    @Query(sort: \Transaction.date, order: .reverse) private var transactions: [Transaction]
     @Query private var settings: [AppSettings]
 
+    /// Domain transactions read through the repository (kept current with legacy
+    /// writes by `DataService`'s write-through). Loaded on appear.
+    @State private var transactions: [ExpenseDomain.Transaction] = []
     @State private var showingAddBudget = false
 
     private var currentSettings: AppSettings? {
@@ -23,12 +27,18 @@ struct BudgetsView: View {
     }
 
     private var totalSpentThisMonth: Double {
-        let start = Date().startOfMonth
-        let end = Date().endOfMonth
-        return transactions.filter { t in
-            t.transactionType == .expense && t.date >= start && t.date <= end
+        DomainStatsService.totalForPeriod(
+            transactions: transactions,
+            type: .expense,
+            startDate: Date().startOfMonth,
+            endDate: Date().endOfMonth
+        ).doubleValue
+    }
+
+    private func load() {
+        if let loaded = errorPresenter.perform("Loading budgets", { try repository.transactions() }) {
+            transactions = loaded
         }
-        .reduce(0.0) { $0 + $1.storedAmount }
     }
 
     var body: some View {
@@ -87,6 +97,7 @@ struct BudgetsView: View {
         .sheet(isPresented: $showingAddBudget) {
             BudgetFormView()
         }
+        .task { load() }
     }
 
     private func deleteBudgets(at offsets: IndexSet) {
@@ -96,4 +107,8 @@ struct BudgetsView: View {
         }
         try? modelContext.save()
     }
+}
+
+private extension Decimal {
+    var doubleValue: Double { NSDecimalNumber(decimal: self).doubleValue }
 }
