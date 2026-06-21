@@ -77,10 +77,13 @@ under P1 → "Adopt `ExpenseRepository` end-to-end".
   tags shown in the list). *(PRs #21–#25.)* Still to do: analytics grouping by
   the two-level catalog, and retiring the legacy flat-category Transactions
   screen once the new one is at full parity.
-- [ ] **Image pipeline (roadmap step 5).** Receipt OCR is wired in the manual
-  form (`TransactionFormView` → `OCRService`/`ReceiptParser`); finish the
-  broader pipeline (batch/invoice images reusing the statement parser + the
-  categorisation engine), and add tests with sample images/text.
+- [x] **Image pipeline (roadmap step 5).** `ReceiptImportPipeline` turns the OCR
+  text of one or more receipt/invoice images into categorized `ReceiptDraft`s
+  (reusing `ReceiptParser` + a `CategorizationEngine`), unit-tested with sample
+  text *(PR #30)*. Surfaced as a batch **"Scan Receipts"** flow
+  (`ReceiptScanImportView`): multi-image pick → on-device OCR → editable draft
+  review → save *(PR #31)*. The OCR/UI layer is verified manually (Vision can't
+  run in CI).
 - [ ] **Foundation Models engine validation.** `FoundationModelsCategorizationEngine`
   is gated behind `@available(macOS 26, *)`/`#if canImport(FoundationModels)`
   and unvalidated on a real macOS 26 toolchain. Validate, and add a runtime
