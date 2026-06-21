@@ -52,9 +52,36 @@ public class DataService {
     // MARK: - Fetch Operations
 
     public func fetchTransactions(filter: TransactionFilter? = nil) -> [Transaction] {
-        let descriptor = FetchDescriptor<Transaction>()
-        var results: [Transaction]
+        // Push the scalar filters (type/category/date) and the sort into the
+        // store via the FetchDescriptor, so SwiftData does the work instead of
+        // fetching every row and filtering/sorting in memory. The relationship
+        // (account) and substring (search) filters are applied to the smaller
+        // result set afterwards.
+        let filterByType = filter?.type != nil
+        let typeRawValue = filter?.type?.rawValue ?? ""
+        let filterByCategory = filter?.categoryId != nil
+        let categoryValue = filter?.categoryId ?? ""
+        let startDate = filter?.startDate ?? .distantPast
+        let endDate = filter?.endDate ?? .distantFuture
 
+        var descriptor = FetchDescriptor<Transaction>(
+            predicate: #Predicate { transaction in
+                (!filterByType || transaction.typeRaw == typeRawValue)
+                    && (!filterByCategory || transaction.categoryId == categoryValue)
+                    && transaction.date >= startDate
+                    && transaction.date <= endDate
+            }
+        )
+
+        let order: SortOrder = (filter?.sortAscending ?? false) ? .forward : .reverse
+        switch filter?.sortBy ?? .date {
+        case .date:
+            descriptor.sortBy = [SortDescriptor(\.date, order: order)]
+        case .amount:
+            descriptor.sortBy = [SortDescriptor(\.storedAmount, order: order)]
+        }
+
+        var results: [Transaction]
         do {
             results = try modelContext.fetch(descriptor)
         } catch {
@@ -62,11 +89,8 @@ public class DataService {
             return []
         }
 
-        guard let filter = filter else {
-            return results.sorted { $0.date > $1.date }
-        }
+        guard let filter = filter else { return results }
 
-        // Apply filters
         if let searchText = filter.searchText, !searchText.isEmpty {
             let lowered = searchText.lowercased()
             results = results.filter { transaction in
@@ -76,36 +100,8 @@ public class DataService {
             }
         }
 
-        if let type = filter.type {
-            results = results.filter { $0.transactionType == type }
-        }
-
-        if let categoryId = filter.categoryId {
-            results = results.filter { $0.categoryId == categoryId }
-        }
-
         if let accountId = filter.accountId {
             results = results.filter { $0.account?.id == accountId }
-        }
-
-        if let startDate = filter.startDate {
-            results = results.filter { $0.date >= startDate }
-        }
-
-        if let endDate = filter.endDate {
-            results = results.filter { $0.date <= endDate }
-        }
-
-        // Apply sorting
-        switch filter.sortBy {
-        case .date:
-            results.sort { a, b in
-                filter.sortAscending ? a.date < b.date : a.date > b.date
-            }
-        case .amount:
-            results.sort { a, b in
-                filter.sortAscending ? a.amount < b.amount : a.amount > b.amount
-            }
         }
 
         return results
