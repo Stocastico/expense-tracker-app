@@ -7,6 +7,7 @@ struct DomainTransactionsView: View {
     @Environment(\.expenseRepository) private var repository
     @Environment(ExpenseErrorPresenter.self) private var errorPresenter
     @State private var model: ExpenseTransactionsListModel?
+    @State private var showingAdd = false
 
     var body: some View {
         Group {
@@ -18,11 +19,23 @@ struct DomainTransactionsView: View {
                 ContentUnavailableView(
                     "No expenses yet",
                     systemImage: "tray",
-                    description: Text("Imported and migrated expenses will appear here.")
+                    description: Text("Add one with +, or imported and migrated expenses will appear here.")
                 )
             }
         }
         .navigationTitle("Expenses (beta)")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showingAdd = true
+                } label: {
+                    Label("Add Transaction", systemImage: "plus")
+                }
+            }
+        }
+        .sheet(isPresented: $showingAdd) {
+            AddDomainTransactionView(onSaved: { ensureModel().load() })
+        }
         .task {
             ensureModel().load()
         }
