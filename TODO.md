@@ -74,9 +74,15 @@ under P1 → "Adopt `ExpenseRepository` end-to-end".
   (list, add, edit, delete) via `@Observable` view models. *(PRs #21–#25.)*
 - [~] **Two-level categories + tags in the UI.** Exposed on the new Expenses
   screen (category/subcategory pickers, tag toggles, account; category-path +
-  tags shown in the list). *(PRs #21–#25.)* Still to do: analytics grouping by
-  the two-level catalog, and retiring the legacy flat-category Transactions
-  screen once the new one is at full parity.
+  tags shown in the list). *(PRs #21–#25.)* The list now also reaches the legacy
+  screen's browse parity — type/category/account/date-range filters, search,
+  date/amount sort, date-grouped sections and settings-driven currency, all in
+  the tested `ExpenseTransactionsListModel`. *(PR #33.)* Still to do before the
+  legacy Transactions screen can be retired: port the **Import Statement /
+  Scan Receipts** flows to write domain records, migrate the other readers
+  (Dashboard, Analytics, Budgets, menu-bar quick-add) onto the repository so
+  there's a single source of truth, then delete the legacy screen; plus
+  analytics grouping by the two-level catalog.
 - [x] **Image pipeline (roadmap step 5).** `ReceiptImportPipeline` turns the OCR
   text of one or more receipt/invoice images into categorized `ReceiptDraft`s
   (reusing `ReceiptParser` + a `CategorizationEngine`), unit-tested with sample
