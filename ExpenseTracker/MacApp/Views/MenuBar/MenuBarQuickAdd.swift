@@ -32,9 +32,14 @@ struct MenuBarQuickAdd: View {
         }
     }
 
+    /// The entered amount as a strictly positive `Decimal`, understanding
+    /// European/US notation and currency symbols (the sign comes from the type).
+    private var parsedAmount: Decimal? {
+        MoneyParser.parsePositiveAmount(amount)
+    }
+
     private var isValid: Bool {
-        guard let parsed = Double(amount.replacingOccurrences(of: ",", with: ".")), parsed > 0 else { return false }
-        return !descriptionText.trimmingCharacters(in: .whitespaces).isEmpty
+        parsedAmount != nil && !descriptionText.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     var body: some View {
@@ -120,11 +125,11 @@ struct MenuBarQuickAdd: View {
     }
 
     private func save() {
-        guard let parsed = Double(amount.replacingOccurrences(of: ",", with: ".")), parsed > 0 else { return }
+        guard let amountValue = parsedAmount else { return }
 
         let transaction = Transaction(
             type: transactionType,
-            amount: parsed,
+            amount: NSDecimalNumber(decimal: amountValue).doubleValue,
             currency: currency,
             descriptionText: descriptionText.trimmingCharacters(in: .whitespaces),
             date: Date(),

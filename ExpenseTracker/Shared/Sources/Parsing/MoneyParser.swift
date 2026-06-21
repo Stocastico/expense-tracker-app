@@ -32,6 +32,18 @@ public enum MoneyParser {
         return negative ? -magnitude : magnitude
     }
 
+    /// Parses a user-typed amount for a manual entry field, accepting it only
+    /// when it resolves to a strictly positive value.
+    ///
+    /// Use this for amount fields (e.g. the menu-bar quick-add) instead of
+    /// `Double(_:)`, so European notation, currency symbols and thousands
+    /// separators are understood consistently. The transaction's sign is decided
+    /// by its type, not by this field, so non-positive input is rejected.
+    public static func parsePositiveAmount(_ raw: String) -> Decimal? {
+        guard let value = parse(raw), value > 0 else { return nil }
+        return value
+    }
+
     // MARK: - Token extraction
 
     private static let amountTokenRegex = try! NSRegularExpression(
