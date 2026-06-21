@@ -94,11 +94,18 @@ under P1 → "Adopt `ExpenseRepository` end-to-end".
     repository via `BudgetSpending`/`DomainStatsService` (`Decimal`); budgets
     themselves stay legacy, so their category icon/name still come from the flat
     catalog. *(PR #37.)*
+  - **Menu-bar quick-add hardened** — its amount field now parses via
+    `MoneyParser.parsePositiveAmount` (European/US notation, currency symbols,
+    thousands separators) instead of a hand-rolled `Double` cast. The write still
+    goes through `DataService` and so is mirrored into the domain by the
+    write-through. *(PR #38.)*
 
-  Still to do before the legacy Transactions screen can be deleted: migrate the
-  last reader (**menu-bar quick-add**), port the **Import Statement / Scan
-  Receipts** writers to the domain, then delete the legacy screen; plus analytics
-  grouping by the two-level catalog.
+  All transaction *readers* now go through the repository. Remaining before the
+  legacy Transactions screen can be deleted: port the remaining *writers* — the
+  manual `TransactionFormView`, the menu-bar quick-add, and **Import Statement /
+  Scan Receipts** — to write the domain directly (the write-through covers them
+  for now), then delete the legacy screen and retire the `Double` models; plus
+  analytics grouping by the two-level catalog.
 - [x] **Image pipeline (roadmap step 5).** `ReceiptImportPipeline` turns the OCR
   text of one or more receipt/invoice images into categorized `ReceiptDraft`s
   (reusing `ReceiptParser` + a `CategorizationEngine`), unit-tested with sample
