@@ -33,7 +33,7 @@ struct ExpenseTransactionsListModelTests {
         )
     }
 
-    private func model(with transactions: [ExpenseDomain.Transaction]) -> ExpenseTransactionsListModel {
+    private func makeModel(with transactions: [ExpenseDomain.Transaction]) -> ExpenseTransactionsListModel {
         let repo = ExpenseDomain.InMemoryRepository(transactions: transactions)
         return ExpenseTransactionsListModel(repository: repo, errorPresenter: ExpenseErrorPresenter())
     }
@@ -42,7 +42,7 @@ struct ExpenseTransactionsListModelTests {
     func loadsRowsNewestFirst() {
         let old = transaction(merchant: "Old", date: Date(timeIntervalSince1970: 1000))
         let new = transaction(merchant: "New", date: Date(timeIntervalSince1970: 2000))
-        let model = model(with: [old, new])
+        let model = makeModel(with: [old, new])
 
         model.load()
 
@@ -56,7 +56,7 @@ struct ExpenseTransactionsListModelTests {
             subcategoryNamed: "bollette",
             tags: ["work", "casa"]
         )
-        let model = model(with: [txn])
+        let model = makeModel(with: [txn])
 
         model.load()
 
@@ -69,7 +69,7 @@ struct ExpenseTransactionsListModelTests {
 
     @Test("Category path omits the subcategory when there isn't one")
     func categoryPathWithoutSubcategory() {
-        let model = model(with: [transaction(subcategoryNamed: nil)])
+        let model = makeModel(with: [transaction(subcategoryNamed: nil)])
         model.load()
         #expect(model.rows[0].categoryPath == "Casa")
     }
@@ -78,11 +78,11 @@ struct ExpenseTransactionsListModelTests {
     func titleFallback() {
         let fromDescription = transaction(merchant: "  ", description: "Bonifico")
         let placeholder = transaction(merchant: nil, description: "")
-        let model = model(with: [fromDescription])
+        let model = makeModel(with: [fromDescription])
         model.load()
         #expect(model.rows[0].title == "Bonifico")
 
-        let model2 = model(with: [placeholder])
+        let model2 = makeModel(with: [placeholder])
         model2.load()
         #expect(model2.rows[0].title == "Untitled")
     }
