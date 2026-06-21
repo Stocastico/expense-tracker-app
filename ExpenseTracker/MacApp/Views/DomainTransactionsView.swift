@@ -8,12 +8,17 @@ struct DomainTransactionsView: View {
     @Environment(ExpenseErrorPresenter.self) private var errorPresenter
     @State private var model: ExpenseTransactionsListModel?
     @State private var showingAdd = false
+    @State private var editingTransaction: ExpenseDomain.Transaction?
 
     var body: some View {
         Group {
             if let model, !model.rows.isEmpty {
                 List(model.rows) { row in
                     DomainTransactionRowView(row: row)
+                        .contextMenu {
+                            Button("Edit") { editingTransaction = model.transaction(id: row.id) }
+                            Button("Delete", role: .destructive) { model.delete(id: row.id) }
+                        }
                 }
             } else {
                 ContentUnavailableView(
@@ -35,6 +40,9 @@ struct DomainTransactionsView: View {
         }
         .sheet(isPresented: $showingAdd) {
             AddDomainTransactionView(onSaved: { ensureModel().load() })
+        }
+        .sheet(item: $editingTransaction) { transaction in
+            AddDomainTransactionView(editing: transaction, onSaved: { ensureModel().load() })
         }
         .task {
             ensureModel().load()

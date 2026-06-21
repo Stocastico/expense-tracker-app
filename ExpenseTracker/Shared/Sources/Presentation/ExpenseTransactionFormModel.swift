@@ -12,6 +12,9 @@ public final class ExpenseTransactionFormModel {
     private let repository: any ExpenseRepository
     private let errorPresenter: ExpenseErrorPresenter
     private let onSaved: () -> Void
+    /// The transaction being edited, or `nil` when adding. Editing preserves the
+    /// fields the minimal form doesn't expose (merchant, description, tags, …).
+    private let editingTransaction: ExpenseDomain.Transaction?
 
     // Editable fields.
     public var amountText: String = ""
@@ -22,14 +25,26 @@ public final class ExpenseTransactionFormModel {
     public private(set) var categories: [ExpenseDomain.Category] = []
     private var catalog = ExpenseDomain.Catalog(categories: [], subcategories: [])
 
+    /// Whether the form is editing an existing transaction (vs adding a new one).
+    public var isEditing: Bool { editingTransaction != nil }
+
     public init(
         repository: any ExpenseRepository,
         errorPresenter: ExpenseErrorPresenter,
+        editing: ExpenseDomain.Transaction? = nil,
         onSaved: @escaping () -> Void = {}
     ) {
         self.repository = repository
         self.errorPresenter = errorPresenter
+        self.editingTransaction = editing
         self.onSaved = onSaved
+
+        if let editing {
+            amountText = Self.displayAmount(editing.amount)
+            type = editing.type
+            selectedCategoryId = editing.category?.id
+            selectedSubcategoryId = editing.subcategory?.id
+        }
     }
 
     /// Loads the catalog so the pickers have categories to show.
@@ -73,15 +88,21 @@ public final class ExpenseTransactionFormModel {
         let category = type == .expense ? categories.first { $0.id == selectedCategoryId } : nil
         let subcategory = category == nil ? nil : subcategories.first { $0.id == selectedSubcategoryId }
 
-        let transaction = ExpenseDomain.Transaction(
-            amount: amount,
-            type: type,
-            category: category,
-            subcategory: subcategory
-        )
+        // When editing, start from the original so untouched fields (merchant,
+        // description, tags, account, note, date) are preserved.
+        var transaction = editingTransaction ?? ExpenseDomain.Transaction(amount: amount, type: type)
+        transaction.amount = amount
+        transaction.type = type
+        transaction.category = category
+        transaction.subcategory = subcategory
 
-        guard errorPresenter.perform("Saving transaction", {
-            try repository.addTransaction(transaction)
+        let title = isEditing ? "Updating transaction" : "Saving transaction"
+        guard errorPresenter.perform(title, {
+            if isEditing {
+                try repository.updateTransaction(transaction)
+            } else {
+                try repository.addTransaction(transaction)
+            }
         }) != nil else {
             return false
         }
@@ -94,5 +115,17 @@ public final class ExpenseTransactionFormModel {
         guard let value = MoneyParser.parse(text) else { return nil }
         let magnitude = abs(value)
         return magnitude > 0 ? magnitude : nil
+    }
+
+    /// Formats a magnitude as a 2-dp European string (comma decimal, no grouping)
+    /// that round-trips through `parseAmount` — used to prefill the field when editing.
+    static func displayAmount(_ value: Decimal) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = Locale(identifier: "it_IT")
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        formatter.usesGroupingSeparator = false
+        return formatter.string(from: value as NSDecimalNumber) ?? "\(value)"
     }
 }
