@@ -112,6 +112,16 @@ struct ExpenseTransactionsListModelTests {
         #expect(try repo.transactions().isEmpty)
     }
 
+    @Test("transaction(id:) returns the full domain transaction behind a row")
+    func transactionLookup() {
+        let txn = transaction(merchant: "X")
+        let repo = ExpenseDomain.InMemoryRepository(transactions: [txn])
+        let model = ExpenseTransactionsListModel(repository: repo, errorPresenter: ExpenseErrorPresenter())
+        model.load()
+        #expect(model.transaction(id: txn.id)?.id == txn.id)
+        #expect(model.transaction(id: UUID()) == nil)
+    }
+
     @Test("A delete failure routes to the presenter")
     func deleteFailureSurfaces() {
         let presenter = ExpenseErrorPresenter()

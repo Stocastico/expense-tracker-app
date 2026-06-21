@@ -25,10 +25,17 @@ public final class ExpenseTransactionsListModel {
     private let errorPresenter: ExpenseErrorPresenter
 
     public private(set) var rows: [Row] = []
+    /// The domain transactions behind the rows, kept so a row can be opened for editing.
+    private var loadedTransactions: [ExpenseDomain.Transaction] = []
 
     public init(repository: any ExpenseRepository, errorPresenter: ExpenseErrorPresenter) {
         self.repository = repository
         self.errorPresenter = errorPresenter
+    }
+
+    /// The full domain transaction behind a row, by id.
+    public func transaction(id: UUID) -> ExpenseDomain.Transaction? {
+        loadedTransactions.first { $0.id == id }
     }
 
     /// Loads transactions (newest first). On failure the error is surfaced and
@@ -39,9 +46,19 @@ public final class ExpenseTransactionsListModel {
         }) else {
             return
         }
-        rows = transactions
-            .sorted { $0.date > $1.date }
-            .map(Self.row(from:))
+        let sorted = transactions.sorted { $0.date > $1.date }
+        loadedTransactions = sorted
+        rows = sorted.map(Self.row(from:))
+    }
+
+    /// Deletes a transaction and reloads. Failures are surfaced.
+    public func delete(id: UUID) {
+        guard errorPresenter.perform("Deleting transaction", {
+            try repository.deleteTransaction(id: id)
+        }) != nil else {
+            return
+        }
+        load()
     }
 
     static func row(from transaction: ExpenseDomain.Transaction) -> Row {

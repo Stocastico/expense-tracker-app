@@ -3,6 +3,8 @@ import SwiftUI
 /// A minimal add-transaction sheet that writes through `ExpenseRepository`.
 /// Thin shell over `ExpenseTransactionFormModel`.
 struct AddDomainTransactionView: View {
+    /// An existing transaction to edit, or `nil` to add a new one.
+    var editing: ExpenseDomain.Transaction? = nil
     /// Called after a successful save (so the list can reload).
     let onSaved: () -> Void
 
@@ -20,7 +22,7 @@ struct AddDomainTransactionView: View {
                     ProgressView()
                 }
             }
-            .navigationTitle("New transaction")
+            .navigationTitle(editing == nil ? "New transaction" : "Edit transaction")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -73,6 +75,7 @@ struct AddDomainTransactionView: View {
         let created = ExpenseTransactionFormModel(
             repository: repository,
             errorPresenter: errorPresenter,
+            editing: editing,
             onSaved: {
                 dismiss()
                 onSaved()
