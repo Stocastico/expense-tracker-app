@@ -77,11 +77,12 @@ What's left is **UI-only**, and best done where the flow can actually be run:
 verify by importing a real PDF/CSV and confirming rows land as domain
 transactions with the right category/amount/account.
 
-**Possible follow-up (CI-testable, can be done from anywhere):** a two-level
-category *keyword heuristic* to seed an initial category when nothing is learned
-yet — today `StatementImportModel` suggests only from learned rules, where the
-legacy flow also used `DefaultCategories.detectCategory`. That detector is keyed
-on the flat catalog; a domain equivalent is pure logic and unit-testable.
+**Done (CI):** the two-level category *keyword heuristic* —
+`ExpenseDomain.CategoryKeywordMatcher` + the `DefaultExpenseKeywordRules`
+Italian/Spanish seed — now seeds an initial category when nothing is learned yet
+(`StatementImportModel` falls back to it; learned rules still win). The seed
+mappings are a deliberately conservative starting point; refine them in
+`Shared/Sources/Domain/DefaultExpenseKeywordRules.swift`.
 
 ## 3. Manually verify the existing OCR surfaces
 
