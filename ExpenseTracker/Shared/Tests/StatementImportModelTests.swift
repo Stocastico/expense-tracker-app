@@ -112,11 +112,42 @@ struct StatementImportModelTests {
         #expect(rule.categoryId == casa.id)
     }
 
+    @Test("A keyword seeds a category for an unlearned expense at load")
+    func keywordSeedsCategoryAtLoad() throws {
+        let (model, _, _) = makeModel([entry("Compra en Mercadona", "12.50", kind: .expense)])
+        let spesa = try #require(model.categories.first { $0.displayName == "Spesa" })
+        #expect(model.drafts[0].selectedCategoryId == spesa.id)
+    }
+
+    @Test("A learned rule takes precedence over the keyword seed")
+    func learnedBeatsKeyword() throws {
+        let repository = ExpenseDomain.InMemoryRepository.seeded()
+        let presenter = ExpenseErrorPresenter()
+        let casa = try #require(try repository.catalog().categories.first { $0.displayName == "Casa" })
+        try repository.saveCategoryRule(ExpenseDomain.CategoryRule(key: "mercadona", categoryId: casa.id))
+
+        let model = StatementImportModel(
+            entries: [entry("Mercadona", "12.50", kind: .expense)],
+            repository: repository,
+            errorPresenter: presenter
+        )
+        model.load()
+        // Learned "Casa" wins over the keyword seed's "Spesa".
+        #expect(model.drafts[0].selectedCategoryId == casa.id)
+    }
+
+    @Test("Income gets no keyword suggestion")
+    func incomeNoKeywordSuggestion() {
+        let (model, _, _) = makeModel([entry("Mercadona", "12.50", kind: .income)])
+        #expect(model.drafts[0].selectedCategoryId == nil)
+    }
+
     @Test("A previously learned category pre-fills the draft at load")
     func loadAppliesLearnedCategory() throws {
         let repository = ExpenseDomain.InMemoryRepository.seeded()
         let presenter = ExpenseErrorPresenter()
         let casa = try #require(try repository.catalog().categories.first { $0.displayName == "Casa" })
+        let spesa = try #require(try repository.catalog().categories.first { $0.displayName == "Spesa" })
         try repository.saveCategoryRule(ExpenseDomain.CategoryRule(key: "mercadona", categoryId: casa.id))
 
         let model = StatementImportModel(
@@ -125,9 +156,10 @@ struct StatementImportModelTests {
             errorPresenter: presenter
         )
         model.load()
-        // "MERCADONA 1234 BILBAO" normalises to "mercadona bilbao" — no match —
-        // while a plain "Mercadona" would. Use the exact learned key here.
-        #expect(model.drafts[0].selectedCategoryId == nil)
+        // "MERCADONA 1234 BILBAO" normalises to "mercadona bilbao", so it misses
+        // the learned "mercadona" key — but the keyword seed still matches the
+        // "mercadona" substring, suggesting Spesa (not the learned Casa).
+        #expect(model.drafts[0].selectedCategoryId == spesa.id)
 
         let model2 = StatementImportModel(
             entries: [entry("Mercadona", "12.50", kind: .expense)],

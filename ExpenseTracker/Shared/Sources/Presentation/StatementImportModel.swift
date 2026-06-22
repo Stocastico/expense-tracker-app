@@ -92,10 +92,13 @@ public final class StatementImportModel {
             self.learner = ExpenseDomain.CategoryLearner(rules: rules)
         }
 
+        // For expenses, prefer a learned rule, then fall back to the keyword seed.
+        let keywordMatcher = DefaultExpenseKeywordRules.matcher(for: catalog)
         drafts = entries.map { entry in
             let type: TransactionType = entry.isExpense ? .expense : .income
             let suggestion = type == .expense
-                ? learner.suggestion(merchant: nil, description: entry.description)
+                ? (learner.suggestion(merchant: nil, description: entry.description)
+                    ?? keywordMatcher.suggestion(for: entry.description))
                 : nil
             return Draft(
                 date: entry.date ?? Date(),

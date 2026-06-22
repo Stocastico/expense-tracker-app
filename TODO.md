@@ -142,7 +142,10 @@ under P1 → "Adopt `ExpenseRepository` end-to-end".
       pre-deselected) and writes the selected ones through `ExpenseRepository` as
       domain `Transaction`s (Decimal via `MoneyParser`, two-level category,
       account), reinforcing each description → category in the
-      `CategoryLearner`. *(PR #48.)* **Remaining:** swap `PDFImportView`'s review
+      `CategoryLearner`. *(PR #48.)* An unlearned expense also gets a starter
+      category from a two-level **keyword heuristic**
+      (`ExpenseDomain.CategoryKeywordMatcher` + the `DefaultExpenseKeywordRules`
+      Italian/Spanish seed; learned rules win). *(PR #49.)* **Remaining:** swap `PDFImportView`'s review
       table to bind to this model (Decimal amount + two-level category pickers)
       and retire its legacy `DataService`/`CategoryRuleService` write — a
       build-machine task (see `BUILD-MACHINE-TODO.md`), since the file-pick + PDF
