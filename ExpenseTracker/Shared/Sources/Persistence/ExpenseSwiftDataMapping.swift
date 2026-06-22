@@ -23,7 +23,11 @@ extension ExpenseTransactionRecord {
             // Sorted for a stable on-disk representation; tags are a Set in the domain.
             tags: transaction.tags
                 .map { StoredExpenseTag(id: $0.id, displayName: $0.displayName) }
-                .sorted { $0.id.uuidString < $1.id.uuidString }
+                .sorted { $0.id.uuidString < $1.id.uuidString },
+            recurringFrequencyRaw: transaction.recurrence?.frequency.rawValue,
+            recurringEndDate: transaction.recurrence?.endDate,
+            recurringParentId: transaction.recurringParentId,
+            receiptData: transaction.receiptData
         )
     }
 
@@ -44,6 +48,10 @@ extension ExpenseTransactionRecord {
         tags = transaction.tags
             .map { StoredExpenseTag(id: $0.id, displayName: $0.displayName) }
             .sorted { $0.id.uuidString < $1.id.uuidString }
+        recurringFrequencyRaw = transaction.recurrence?.frequency.rawValue
+        recurringEndDate = transaction.recurrence?.endDate
+        recurringParentId = transaction.recurringParentId
+        receiptData = transaction.receiptData
     }
 
     /// Reconstructs the domain transaction from this record.
@@ -58,6 +66,11 @@ extension ExpenseTransactionRecord {
             return ExpenseDomain.Subcategory(id: id, displayName: name, parentId: parentId)
         }()
 
+        // A stored frequency marks a recurring template; reconstruct its schedule.
+        let recurrence: ExpenseDomain.Recurrence? = recurringFrequencyRaw
+            .flatMap { RecurringFrequency(rawValue: $0) }
+            .map { ExpenseDomain.Recurrence(frequency: $0, endDate: recurringEndDate) }
+
         return ExpenseDomain.Transaction(
             id: id,
             amount: amount,
@@ -69,7 +82,10 @@ extension ExpenseTransactionRecord {
             subcategory: subcategory,
             tags: Set(tags.map { ExpenseDomain.Tag(id: $0.id, displayName: $0.displayName) }),
             accountId: accountId,
-            note: note
+            note: note,
+            recurrence: recurrence,
+            recurringParentId: recurringParentId,
+            receiptData: receiptData
         )
     }
 }

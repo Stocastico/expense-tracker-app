@@ -23,6 +23,16 @@ public enum LegacyExpenseMigration {
         // Income lives off the category axis, so only resolve for expenses.
         let resolved = legacy.type == .expense ? resolveCategory(legacy.categoryId) : nil
 
+        // A recurring legacy template carries a frequency; a generated occurrence
+        // instead carries only its parent id. Modelling the frequency as required
+        // inside `Recurrence` drops a malformed "recurring with no cadence" row to
+        // no schedule rather than inventing one.
+        let recurrence: ExpenseDomain.Recurrence? = legacy.isRecurring
+            ? legacy.recurringFrequency.map {
+                ExpenseDomain.Recurrence(frequency: $0, endDate: legacy.recurringEndDate)
+              }
+            : nil
+
         return ExpenseDomain.Transaction(
             id: legacy.id,
             amount: money(from: legacy.storedAmount),
@@ -39,7 +49,10 @@ public enum LegacyExpenseMigration {
                     .map { ExpenseDomain.Tag(id: ExpenseDomain.StableID.make("tag:\($0)"), displayName: $0) }
             ),
             accountId: legacy.account?.id,
-            note: legacy.notes ?? ""
+            note: legacy.notes ?? "",
+            recurrence: recurrence,
+            recurringParentId: legacy.recurringParentId,
+            receiptData: legacy.receiptData
         )
     }
 

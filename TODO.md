@@ -104,14 +104,27 @@ under P1 → "Adopt `ExpenseRepository` end-to-end".
   **All transaction *readers* now go through the repository.** What remains
   before the legacy Transactions screen can be deleted:
 
-  - **Port the *writers* to the domain** — manual `TransactionFormView`, menu-bar
-    quick-add, and **Import Statement / Scan Receipts** currently write legacy
-    `Transaction` (reaching the domain only via the write-through). **Blocked
-    first on a domain-model gap:** `ExpenseDomain.Transaction` has no
-    `recurring*`/`receiptData` fields, so a faithful writer port would drop
-    recurring schedules and receipt images. **Next step is to model recurring +
-    receipts in the domain** (with migration), *then* swap the writers onto
-    `ExpenseRepository`.
+  - **Domain now models recurring + receipts** — `ExpenseDomain.Transaction`
+    carries a `recurrence` (the new `ExpenseDomain.Recurrence`: required
+    frequency + optional end date), a `recurringParentId` for generated
+    occurrences, and `receiptData`; `ExpenseTransactionRecord` stores them
+    (receipt via `@Attribute(.externalStorage)`), mapping round-trips them, and
+    `LegacyExpenseMigration` carries them across. This clears the domain-model
+    gap that blocked the writer port.
+  - **Port the *writers* to the domain** (incremental, one writer per PR; ported
+    writers use the two-level domain catalog):
+    - [x] **Menu-bar quick-add** — now a thin shell over
+      `ExpenseTransactionFormModel`, writing an `ExpenseDomain.Transaction`
+      through `@Environment(\.expenseRepository)` (Decimal, two-level
+      category/subcategory, account) and surfacing failures via the presenter.
+      Stays open for repeated entries via `ExpenseTransactionFormModel.reset()`.
+      Dropped the flat-category `CategoryRuleService` auto-suggest on this
+      surface (no domain learning store yet — revisit when categorization is
+      ported).
+    - [ ] **Manual `TransactionFormView`** — the rich form (recurring schedule +
+      generated occurrences, receipt OCR, category learning). Needs domain
+      occurrence-generation + receipt handling in the form model.
+    - [ ] **Import Statement / Scan Receipts** — batch writers.
   - **Then** delete the legacy Transactions screen + "(beta)" label and retire
     the `Double` `@Model` types + `DataService`.
   - **Analytics grouping** by the two-level catalog (deferred).
