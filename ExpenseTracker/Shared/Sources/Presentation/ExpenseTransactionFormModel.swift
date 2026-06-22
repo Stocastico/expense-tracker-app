@@ -159,26 +159,29 @@ public final class ExpenseTransactionFormModel {
               )
             : nil
 
+        // A new recurring template also writes its generated occurrences (an
+        // open-ended schedule generates a year out, matching the legacy form);
+        // editing updates the row in place and does not regenerate.
+        let occurrences: [ExpenseDomain.Transaction]
+        if !isEditing, transaction.recurrence != nil {
+            let until = hasEndDate ? recurringEndDate : Date().monthsFromNow(12)
+            occurrences = ExpenseDomain.recurringOccurrences(of: transaction, until: until)
+        } else {
+            occurrences = []
+        }
+
         let title = isEditing ? "Updating transaction" : "Saving transaction"
-        guard errorPresenter.perform(title, {
+        let outcome = errorPresenter.perform(title) { () throws -> Void in
             if isEditing {
-                // Editing updates the row in place; it does not regenerate the
-                // schedule's occurrences.
                 try repository.updateTransaction(transaction)
             } else {
                 try repository.addTransaction(transaction)
-                // A new recurring template also writes its generated occurrences.
-                // Open-ended schedules generate a year out, matching the legacy form.
-                if transaction.recurrence != nil {
-                    let until = hasEndDate ? recurringEndDate : Date().monthsFromNow(12)
-                    for occurrence in ExpenseDomain.recurringOccurrences(of: transaction, until: until) {
-                        try repository.addTransaction(occurrence)
-                    }
+                for occurrence in occurrences {
+                    try repository.addTransaction(occurrence)
                 }
             }
-        }) != nil else {
-            return false
         }
+        guard outcome != nil else { return false }
         onSaved()
         return true
     }
