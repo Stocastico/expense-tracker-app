@@ -121,9 +121,15 @@ under P1 → "Adopt `ExpenseRepository` end-to-end".
       Dropped the flat-category `CategoryRuleService` auto-suggest on this
       surface (no domain learning store yet — revisit when categorization is
       ported).
-    - [ ] **Manual `TransactionFormView`** — the rich form (recurring schedule +
-      generated occurrences, receipt OCR, category learning). Needs domain
-      occurrence-generation + receipt handling in the form model.
+    - [~] **Manual `TransactionFormView`** — bringing the rich form's
+      capabilities onto the domain `ExpenseTransactionFormModel` /
+      `AddDomainTransactionView` (additive; the legacy screen stays put until the
+      whole legacy Transactions screen is retired). Done: **recurring schedules**
+      (pure `ExpenseDomain.recurringOccurrences(of:until:)` — template + generated
+      occurrences) and an editable **note**. Still to port: **receipt image +
+      OCR** (`receiptData` round-trips already; needs the file-pick/OCR UI) and
+      **category learning** (`CategoryRuleService` is keyed on the flat catalog —
+      needs a two-level equivalent).
     - [ ] **Import Statement / Scan Receipts** — batch writers.
   - **Then** delete the legacy Transactions screen + "(beta)" label and retire
     the `Double` `@Model` types + `DataService`.
