@@ -54,8 +54,10 @@ struct AddDomainTransactionView: View {
 
             TextField("Merchant", text: $model.merchant)
                 .textFieldStyle(.roundedBorder)
+                .onSubmit { model.suggestCategory() }
             TextField("Description", text: $model.descriptionText)
                 .textFieldStyle(.roundedBorder)
+                .onSubmit { model.suggestCategory() }
             DatePicker("Date", selection: $model.date, displayedComponents: .date)
 
             if model.type == .expense {

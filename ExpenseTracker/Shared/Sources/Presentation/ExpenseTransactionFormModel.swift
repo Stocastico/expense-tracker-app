@@ -182,8 +182,52 @@ public final class ExpenseTransactionFormModel {
             }
         }
         guard outcome != nil else { return false }
+        // Best-effort: remember this merchant's category so future entries can be
+        // pre-filled. Runs after the transaction is safely stored.
+        learnCategory(merchant: transaction.merchant, category: category, subcategory: subcategory)
         onSaved()
         return true
+    }
+
+    /// Applies the category/subcategory learned for the current merchant (or
+    /// description) to the pickers, if one was previously learned. Intended to be
+    /// called by the view when the merchant field changes. No-op for income
+    /// (which is never categorized) and for unknown merchants.
+    public func suggestCategory() {
+        guard type == .expense else { return }
+        guard let rules = errorPresenter.perform("Loading learned categories", {
+            try repository.categoryRules()
+        }) else {
+            return
+        }
+        let learner = ExpenseDomain.CategoryLearner(rules: rules)
+        guard let suggestion = learner.suggestion(merchant: merchant, description: descriptionText) else {
+            return
+        }
+        selectedCategoryId = suggestion.categoryId
+        selectedSubcategoryId = suggestion.subcategoryId
+    }
+
+    /// Records (or reinforces) the merchant → category/subcategory association so
+    /// `suggestCategory()` can offer it next time. Only expenses with a category
+    /// are learned; income is never categorized.
+    private func learnCategory(
+        merchant: String?,
+        category: ExpenseDomain.Category?,
+        subcategory: ExpenseDomain.Subcategory?
+    ) {
+        guard type == .expense, let category else { return }
+        _ = errorPresenter.perform("Learning category") {
+            var learner = ExpenseDomain.CategoryLearner(rules: try repository.categoryRules())
+            if let rule = learner.learn(
+                merchant: merchant,
+                description: descriptionText,
+                categoryId: category.id,
+                subcategoryId: subcategory?.id
+            ) {
+                try repository.saveCategoryRule(rule)
+            }
+        }
     }
 
     /// Clears the per-entry fields for a fresh add, preserving the context the
