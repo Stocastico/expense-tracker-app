@@ -89,12 +89,19 @@ per PR, using the two-level domain catalog:**
 - **Manual form: in progress.** The domain form
   (`ExpenseTransactionFormModel` / `AddDomainTransactionView`) now supports
   **recurring schedules** (pure `ExpenseDomain.recurringOccurrences(of:until:)`
-  generates the occurrences) and an editable **note**, bringing the manual
-  form's capabilities onto the repository additively. Still to port: **receipt
-  image + OCR** and **category learning** (the legacy `CategoryRuleService` is
-  keyed on the flat catalog). The legacy `TransactionFormView` itself stays
-  (writes legacy, mirrored to the domain) until the whole legacy Transactions
-  screen is retired.
+  generates the occurrences), an editable **note**, and **category learning** —
+  a pure two-level `ExpenseDomain.CategoryLearner` (keyed via
+  `MerchantKey.normalize`) persisted through the repository
+  (`categoryRules()` / `saveCategoryRule(_:)`, backed by `ExpenseCategoryRuleRecord`).
+  The form learns a categorized expense's merchant → category/subcategory on
+  save and `suggestCategory()` pre-fills the pickers for a known merchant (only
+  when no category is chosen, so it never overwrites a manual pick). All
+  additive; the legacy `CategoryRuleService` (flat catalog) stays for the legacy
+  screen. Still to port: **receipt image + OCR** (`receiptData` round-trips
+  already; needs the file-pick/OCR UI) — tracked in `BUILD-MACHINE-TODO.md`
+  because it can only be built and verified on a macOS-15 + Xcode-16 Mac. The
+  legacy `TransactionFormView` itself stays (writes legacy, mirrored to the
+  domain) until the whole legacy Transactions screen is retired.
 - **Still legacy (write to `DataService`, reach the domain via the bridge):**
   Import Statement / Scan Receipts, and the legacy `TransactionFormView`. All
   parse amounts with `MoneyParser.parsePositiveAmount` (PRs #38, #39). Keep the
