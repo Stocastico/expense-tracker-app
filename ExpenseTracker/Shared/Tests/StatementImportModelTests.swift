@@ -147,6 +147,7 @@ struct StatementImportModelTests {
         let repository = ExpenseDomain.InMemoryRepository.seeded()
         let presenter = ExpenseErrorPresenter()
         let casa = try #require(try repository.catalog().categories.first { $0.displayName == "Casa" })
+        let spesa = try #require(try repository.catalog().categories.first { $0.displayName == "Spesa" })
         try repository.saveCategoryRule(ExpenseDomain.CategoryRule(key: "mercadona", categoryId: casa.id))
 
         let model = StatementImportModel(
@@ -155,9 +156,10 @@ struct StatementImportModelTests {
             errorPresenter: presenter
         )
         model.load()
-        // "MERCADONA 1234 BILBAO" normalises to "mercadona bilbao" — no match —
-        // while a plain "Mercadona" would. Use the exact learned key here.
-        #expect(model.drafts[0].selectedCategoryId == nil)
+        // "MERCADONA 1234 BILBAO" normalises to "mercadona bilbao", so it misses
+        // the learned "mercadona" key — but the keyword seed still matches the
+        // "mercadona" substring, suggesting Spesa (not the learned Casa).
+        #expect(model.drafts[0].selectedCategoryId == spesa.id)
 
         let model2 = StatementImportModel(
             entries: [entry("Mercadona", "12.50", kind: .expense)],
