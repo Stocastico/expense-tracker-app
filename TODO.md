@@ -2,24 +2,27 @@
 
 Status of the app as of this document: a working macOS SwiftUI/SwiftData expense
 tracker (dashboard, transactions, analytics, budgets, settings, menu-bar
-quick-add, PDF/CSV import, receipt OCR, learned categorisation) **plus** a new,
-pure, fully-tested `ExpenseDomain` model + `ExpenseRepository` + SwiftData
-adapter that is wired into the app but **not yet consumed by any view**.
+quick-add, PDF/CSV import, receipt OCR, learned categorisation) **mid-convergence**
+onto a pure, two-level `ExpenseDomain` model behind `ExpenseRepository`.
 
-Two parallel data models currently coexist:
+Two parallel data models still coexist, but the new one is now in active use:
 
-- **Legacy (live in the UI):** `Transaction`/`Account`/`Budget`/`Category` —
-  flat categories, money stored as `Double`.
-- **New (tested, unused by UI):** `ExpenseDomain.{Category,Subcategory,Tag,
-  Transaction}` — two-level categories, tags, money as `Decimal`, behind
-  `ExpenseRepository`.
+- **Legacy:** `Transaction`/`Account`/`Budget`/`Category` — flat categories,
+  money stored as `Double`. Still the live *Transactions* screen's writer, kept
+  in sync with the domain by a write-through bridge.
+- **New:** `ExpenseDomain.{Category,Subcategory,Tag,Transaction}` — two-level
+  categories, tags, money as `Decimal`, behind `ExpenseRepository`.
 
-The single biggest decision for "fully working" was **whether/how to converge
-these two**. **That path is now chosen:** adopt `ExpenseRepository` in the UI
-incrementally and retire the legacy `Double` math over time. As of 2026-06 the
-supporting correctness work is done (PRs #15–#18) — legacy data migrates into
-the new domain on launch — and what remains is consuming the new layer in the
-views. Everything below is grouped by priority.
+The convergence path is chosen and well underway: legacy data migrates into the
+domain on launch (PRs #15–#18); **all transaction readers** (Dashboard,
+Analytics, Budgets) go through the repository in `Decimal`; and most **writers**
+are ported — manual form (recurring, note, **category learning**), menu-bar
+quick-add, and the **Import Statement writer core** (`StatementImportModel` +
+keyword heuristic). What remains to retire the legacy screen is mostly
+**build-machine UI work** (see `BUILD-MACHINE-TODO.md`): swapping the import
+review table onto its model, the receipt-image/OCR form, then deleting the legacy
+Transactions screen + `Double` `@Model` types. Everything below is grouped by
+priority.
 
 ---
 
