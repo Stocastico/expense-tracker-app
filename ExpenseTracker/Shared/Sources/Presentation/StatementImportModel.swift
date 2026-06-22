@@ -59,7 +59,9 @@ public final class StatementImportModel {
     public let accounts: [AccountOption]
     public var selectedAccountId: UUID?
 
-    public private(set) var drafts: [Draft] = []
+    /// Editable import rows. Publicly mutable so the review table can bind to
+    /// each row (`$model.drafts[i]...`); rebuilt by `load()`.
+    public var drafts: [Draft] = []
     public private(set) var categories: [ExpenseDomain.Category] = []
     public private(set) var importedCount = 0
 
