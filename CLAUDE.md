@@ -86,10 +86,19 @@ per PR, using the two-level domain catalog:**
   `ExpenseTransactionFormModel`, writing through `@Environment(\.expenseRepository)`
   (`reset()` keeps the popover open for repeated entries). It no longer touches
   `DataService` or the flat-category `CategoryRuleService` auto-suggest.
-- **Still legacy (write to `DataService`, reach the domain via the bridge):** the
-  manual `TransactionFormView` (recurring + receipt OCR + category learning) and
-  Import/Scan. Both parse amounts with `MoneyParser.parsePositiveAmount` (PRs
-  #38, #39). Keep the legacy writer + write-through until each is ported.
+- **Manual form: in progress.** The domain form
+  (`ExpenseTransactionFormModel` / `AddDomainTransactionView`) now supports
+  **recurring schedules** (pure `ExpenseDomain.recurringOccurrences(of:until:)`
+  generates the occurrences) and an editable **note**, bringing the manual
+  form's capabilities onto the repository additively. Still to port: **receipt
+  image + OCR** and **category learning** (the legacy `CategoryRuleService` is
+  keyed on the flat catalog). The legacy `TransactionFormView` itself stays
+  (writes legacy, mirrored to the domain) until the whole legacy Transactions
+  screen is retired.
+- **Still legacy (write to `DataService`, reach the domain via the bridge):**
+  Import Statement / Scan Receipts, and the legacy `TransactionFormView`. All
+  parse amounts with `MoneyParser.parsePositiveAmount` (PRs #38, #39). Keep the
+  legacy writer + write-through until each is ported.
 
 ## Dev principles (please follow without being asked)
 

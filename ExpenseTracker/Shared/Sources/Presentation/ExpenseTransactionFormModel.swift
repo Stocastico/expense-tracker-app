@@ -36,6 +36,13 @@ public final class ExpenseTransactionFormModel {
     public var date: Date = Date()
     public var selectedTagIds: Set<UUID> = []
     public var selectedAccountId: UUID?
+    public var note: String = ""
+
+    // Recurring schedule.
+    public var isRecurring: Bool = false
+    public var recurringFrequency: RecurringFrequency = .monthly
+    public var hasEndDate: Bool = false
+    public var recurringEndDate: Date = Date().monthsFromNow(12)
 
     public private(set) var categories: [ExpenseDomain.Category] = []
     public private(set) var availableTags: [ExpenseDomain.Tag] = []
@@ -69,6 +76,15 @@ public final class ExpenseTransactionFormModel {
             date = editing.date
             selectedTagIds = Set(editing.tags.map(\.id))
             selectedAccountId = editing.accountId
+            note = editing.note
+            if let recurrence = editing.recurrence {
+                isRecurring = true
+                recurringFrequency = recurrence.frequency
+                if let endDate = recurrence.endDate {
+                    hasEndDate = true
+                    recurringEndDate = endDate
+                }
+            }
         }
     }
 
@@ -135,17 +151,37 @@ public final class ExpenseTransactionFormModel {
         }
         transaction.tags = Set(selectedTagIds.compactMap { tagsById[$0] })
         transaction.accountId = selectedAccountId
+        transaction.note = note
+        transaction.recurrence = isRecurring
+            ? ExpenseDomain.Recurrence(
+                frequency: recurringFrequency,
+                endDate: hasEndDate ? recurringEndDate : nil
+              )
+            : nil
+
+        // A new recurring template also writes its generated occurrences (an
+        // open-ended schedule generates a year out, matching the legacy form);
+        // editing updates the row in place and does not regenerate.
+        let occurrences: [ExpenseDomain.Transaction]
+        if !isEditing, transaction.recurrence != nil {
+            let until = hasEndDate ? recurringEndDate : Date().monthsFromNow(12)
+            occurrences = ExpenseDomain.recurringOccurrences(of: transaction, until: until)
+        } else {
+            occurrences = []
+        }
 
         let title = isEditing ? "Updating transaction" : "Saving transaction"
-        guard errorPresenter.perform(title, {
+        let outcome = errorPresenter.perform(title) { () throws -> Void in
             if isEditing {
                 try repository.updateTransaction(transaction)
             } else {
                 try repository.addTransaction(transaction)
+                for occurrence in occurrences {
+                    try repository.addTransaction(occurrence)
+                }
             }
-        }) != nil else {
-            return false
         }
+        guard outcome != nil else { return false }
         onSaved()
         return true
     }
@@ -159,6 +195,9 @@ public final class ExpenseTransactionFormModel {
         descriptionText = ""
         selectedTagIds = []
         date = Date()
+        note = ""
+        isRecurring = false
+        hasEndDate = false
     }
 
     /// Parses an amount in European or US notation into a positive magnitude.
