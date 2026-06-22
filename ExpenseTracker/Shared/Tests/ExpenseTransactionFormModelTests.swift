@@ -390,11 +390,12 @@ struct ExpenseTransactionFormModelTests {
         teacher.selectedSubcategoryId = bollette.id
         #expect(teacher.save())
 
-        // A fresh entry for the same merchant (different branch number) gets it applied.
+        // A fresh entry for the same merchant (different branch number) gets it
+        // applied — the branch digits are dropped, so the key still matches.
         let model = ExpenseTransactionFormModel(repository: repository, errorPresenter: presenter)
         model.load()
         model.type = .expense
-        model.merchant = "MERCADONA 1234 BILBAO"
+        model.merchant = "MERCADONA 1234"
         model.suggestCategory()
 
         #expect(model.selectedCategoryId == casa.id)
