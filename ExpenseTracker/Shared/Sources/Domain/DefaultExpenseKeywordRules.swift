@@ -19,35 +19,36 @@ public enum DefaultExpenseKeywordRules {
         ("Fuori casa", "take-away/delivery", ["glovo", "just eat", "justeat", "deliveroo", "uber eats", "ubereats"]),
 
         // Subscriptions: "amazon prime" / "movistar+" before the generic brands below.
-        ("Abbonamenti", "streaming", ["netflix", "spotify", "disney+", "disney plus", "hbo", "dazn", "prime video", "amazon prime", "filmin", "movistar+"]),
-        ("Abbonamenti", "software", ["adobe", "microsoft 365", "office 365", "jetbrains", "github", "openai", "chatgpt"]),
+        ("Abbonamenti", "streaming", ["netflix", "spotify", "disney+", "disney plus", "hbo", "dazn", "prime video", "amazon prime", "filmin", "movistar+", "apple tv", "paramount", "crunchyroll"]),
+        ("Abbonamenti", "software", ["adobe", "microsoft 365", "office 365", "jetbrains", "github", "openai", "chatgpt", "notion", "canva", "google workspace"]),
         ("Abbonamenti", "cloud", ["icloud", "dropbox", "google one"]),
 
-        ("Trasporti", "benzina", ["repsol", "cepsa", "galp", "gasolinera", "estacion de servicio", "agip", "tamoil", "q8"]),
-        ("Trasporti", "mezzi pubblici", ["renfe", "euskotren", "metro bilbao", "trenitalia", "alsa"]),
+        ("Trasporti", "benzina", ["repsol", "petronor", "cepsa", "galp", "gasolinera", "estacion de servicio", "agip", "tamoil", "q8", "shell", "avia"]),
+        ("Trasporti", "mezzi pubblici", ["renfe", "euskotren", "metro bilbao", "bizkaibus", "trenitalia", "alsa", "feve"]),
         ("Trasporti", "taxi", ["taxi", "cabify", "free now", "freenow", "bolt.eu", "uber"]),
 
         ("Salute", "farmacia", ["farmacia", "parafarmacia"]),
         ("Salute", "palestra", ["gimnasio", "palestra", "basic-fit", "basicfit", "mcfit", "vivagym"]),
 
-        ("Casa", "bollette", ["iberdrola", "endesa", "naturgy", "enel", "gas natural"]),
-        ("Casa", "internet/telefono", ["vodafone", "movistar", "orange", "jazztel", "masmovil", "mas movil", "telefonica", "fastweb", "wind tre"]),
+        ("Casa", "bollette", ["iberdrola", "endesa", "naturgy", "enel", "gas natural", "holaluz", "totalenergies"]),
+        ("Casa", "internet/telefono", ["vodafone", "movistar", "orange", "jazztel", "masmovil", "mas movil", "telefonica", "fastweb", "wind tre", "yoigo", "digi", "pepephone"]),
         ("Casa", "mutuo/affitto", ["hipoteca", "alquiler", "affitto", "mutuo"]),
+        ("Casa", "manutenzione", ["leroy merlin", "ikea", "bricomart", "ferreteria", "brico"]),
 
-        ("Spesa", "supermercato", ["mercadona", "carrefour", "eroski", "lidl", "alcampo", "consum", "esselunga", "conad", "supermercato", "supermercado"]),
+        ("Spesa", "supermercato", ["mercadona", "carrefour", "eroski", "lidl", "alcampo", "consum", "esselunga", "conad", "supermercato", "supermercado", "bonpreu", "caprabo", "aldi"]),
         ("Spesa", "fruttivendolo/macelleria", ["carniceria", "fruteria", "macelleria", "fruttivendolo", "pescaderia"]),
 
-        ("Fuori casa", "ristoranti", ["restaurante", "ristorante", "pizzeria", "trattoria", "osteria"]),
+        ("Fuori casa", "ristoranti", ["restaurante", "ristorante", "pizzeria", "trattoria", "osteria", "mcdonald", "burger king", "kfc", "telepizza", "goiko"]),
         ("Fuori casa", "bar/caffetteria", ["cafeteria", "caffetteria", "starbucks", "panaderia", "pasticceria"]),
 
-        ("Shopping", "vestiti", ["zara", "h&m", "primark", "decathlon", "bershka", "pull&bear", "uniqlo", "stradivarius"]),
+        ("Shopping", "vestiti", ["zara", "h&m", "primark", "decathlon", "bershka", "pull&bear", "uniqlo", "stradivarius", "massimo dutti", "oysho", "nike", "adidas"]),
         ("Shopping", "elettronica", ["mediamarkt", "media markt", "pccomponentes", "fnac", "worten"]),
         ("Shopping", "libri", ["casa del libro", "libreria", "feltrinelli"]),
         // Generic shopping fallback — after "amazon prime" above.
         ("Shopping", nil, ["amazon", "aliexpress", "ebay"]),
 
-        ("Viaggi", "voli", ["ryanair", "vueling", "iberia", "easyjet", "ita airways", "air europa", "lufthansa", "wizz air", "klm"]),
-        ("Viaggi", "hotel", ["booking", "airbnb", "hotel", "hostal", "parador"]),
+        ("Viaggi", "voli", ["ryanair", "vueling", "iberia", "easyjet", "ita airways", "air europa", "lufthansa", "wizz air", "klm", "norwegian"]),
+        ("Viaggi", "hotel", ["booking", "airbnb", "hotel", "hostal", "parador", "nh hotel", "expedia", "trivago"]),
     ]
 
     /// Resolves the seed against a catalog: category/subcategory ids are looked
