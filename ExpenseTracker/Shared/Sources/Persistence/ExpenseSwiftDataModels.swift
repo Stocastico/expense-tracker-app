@@ -77,6 +77,13 @@ public final class ExpenseTransactionRecord {
     public var accountId: UUID?
     public var note: String
     public var tags: [StoredExpenseTag]
+    /// Recurring schedule: a non-nil frequency marks a recurring template.
+    public var recurringFrequencyRaw: String?
+    public var recurringEndDate: Date?
+    /// Set on a generated occurrence, pointing back to its template.
+    public var recurringParentId: UUID?
+    /// Attached receipt/invoice image, stored outside the main store.
+    @Attribute(.externalStorage) public var receiptData: Data?
 
     public init(
         id: UUID,
@@ -92,7 +99,11 @@ public final class ExpenseTransactionRecord {
         subcategoryParentId: UUID?,
         accountId: UUID?,
         note: String,
-        tags: [StoredExpenseTag]
+        tags: [StoredExpenseTag],
+        recurringFrequencyRaw: String? = nil,
+        recurringEndDate: Date? = nil,
+        recurringParentId: UUID? = nil,
+        receiptData: Data? = nil
     ) {
         self.id = id
         self.amount = amount
@@ -108,6 +119,10 @@ public final class ExpenseTransactionRecord {
         self.accountId = accountId
         self.note = note
         self.tags = tags
+        self.recurringFrequencyRaw = recurringFrequencyRaw
+        self.recurringEndDate = recurringEndDate
+        self.recurringParentId = recurringParentId
+        self.receiptData = receiptData
     }
 }
 

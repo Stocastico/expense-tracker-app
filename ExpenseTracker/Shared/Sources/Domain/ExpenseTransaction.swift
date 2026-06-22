@@ -14,6 +14,27 @@ extension ExpenseDomain {
         case subcategoryParentMismatch
     }
 
+    // MARK: - Recurrence
+
+    /// A repeating schedule attached to a transaction.
+    ///
+    /// A transaction with a non-nil `recurrence` is the *template* that defines
+    /// how it repeats; the concrete occurrences it generates carry a
+    /// `recurringParentId` pointing back to the template instead. The frequency
+    /// is non-optional so an "is recurring but has no cadence" state is
+    /// unrepresentable.
+    public struct Recurrence: Hashable, Sendable {
+        /// How often the transaction repeats.
+        public var frequency: RecurringFrequency
+        /// The last date the schedule stays active, or `nil` for open-ended.
+        public var endDate: Date?
+
+        public init(frequency: RecurringFrequency, endDate: Date? = nil) {
+            self.frequency = frequency
+            self.endDate = endDate
+        }
+    }
+
     // MARK: - Transaction
 
     /// A single money movement. Money is held as `Decimal` (never `Double`) so
@@ -35,6 +56,13 @@ extension ExpenseDomain {
         /// the SwiftData `Account` type).
         public var accountId: UUID?
         public var note: String
+        /// The repeating schedule, if this transaction is a recurring template.
+        public var recurrence: Recurrence?
+        /// The template this transaction was generated from, if it is a
+        /// concrete occurrence of a recurring schedule.
+        public var recurringParentId: UUID?
+        /// The raw bytes of an attached receipt/invoice image, if any.
+        public var receiptData: Data?
 
         public init(
             id: UUID = UUID(),
@@ -47,7 +75,10 @@ extension ExpenseDomain {
             subcategory: Subcategory? = nil,
             tags: Set<Tag> = [],
             accountId: UUID? = nil,
-            note: String = ""
+            note: String = "",
+            recurrence: Recurrence? = nil,
+            recurringParentId: UUID? = nil,
+            receiptData: Data? = nil
         ) {
             self.id = id
             self.amount = amount
@@ -60,6 +91,9 @@ extension ExpenseDomain {
             self.tags = tags
             self.accountId = accountId
             self.note = note
+            self.recurrence = recurrence
+            self.recurringParentId = recurringParentId
+            self.receiptData = receiptData
         }
 
         /// Validates that the category assignment is internally consistent.
