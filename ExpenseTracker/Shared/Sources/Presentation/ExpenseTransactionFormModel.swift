@@ -150,6 +150,17 @@ public final class ExpenseTransactionFormModel {
         return true
     }
 
+    /// Clears the per-entry fields for a fresh add, preserving the context the
+    /// user is likely to reuse (type, category/subcategory, account). Used by the
+    /// menu-bar quick-add, which stays open for repeated entries.
+    public func reset() {
+        amountText = ""
+        merchant = ""
+        descriptionText = ""
+        selectedTagIds = []
+        date = Date()
+    }
+
     /// Parses an amount in European or US notation into a positive magnitude.
     static func parseAmount(_ text: String) -> Decimal? {
         guard let value = MoneyParser.parse(text) else { return nil }
