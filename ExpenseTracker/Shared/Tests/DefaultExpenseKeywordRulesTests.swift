@@ -27,6 +27,25 @@ struct DefaultExpenseKeywordRulesTests {
         #expect(categoryName("xyzzy unrelated") == nil)
     }
 
+    @Test("Expanded ES/Basque/IT merchants map as expected")
+    func expandedMappings() {
+        #expect(categoryName("PETRONOR E.S. 12") == "Trasporti")        // Basque fuel
+        #expect(categoryName("BIZKAIBUS") == "Trasporti")               // Basque bus
+        #expect(categoryName("IKEA BARAKALDO") == "Casa")               // home / DIY
+        #expect(categoryName("LEROY MERLIN") == "Casa")
+        #expect(categoryName("MCDONALDS BILBAO") == "Fuori casa")       // fast food
+        #expect(categoryName("MASSIMO DUTTI") == "Shopping")
+        #expect(categoryName("APPLE TV") == "Abbonamenti")
+    }
+
+    @Test("Casa/manutenzione resolves for a DIY merchant")
+    func resolvesCasaManutenzione() throws {
+        let matcher = DefaultExpenseKeywordRules.matcher(for: catalog)
+        let suggestion = try #require(matcher.suggestion(for: "IKEA BARAKALDO"))
+        let sub = catalog.subcategories.first { $0.id == suggestion.subcategoryId }
+        #expect(sub?.displayName == "manutenzione")
+    }
+
     @Test("A seeded merchant resolves to its subcategory too")
     func resolvesSubcategory() throws {
         let matcher = DefaultExpenseKeywordRules.matcher(for: catalog)
