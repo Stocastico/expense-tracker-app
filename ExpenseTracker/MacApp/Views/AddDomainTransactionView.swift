@@ -97,6 +97,26 @@ struct AddDomainTransactionView: View {
                     }
                 }
             }
+
+            Section {
+                Toggle("Recurring", isOn: $model.isRecurring)
+                if model.isRecurring {
+                    Picker("Frequency", selection: $model.recurringFrequency) {
+                        ForEach(RecurringFrequency.allCases) { frequency in
+                            Text(frequency.displayName).tag(frequency)
+                        }
+                    }
+                    Toggle("End date", isOn: $model.hasEndDate)
+                    if model.hasEndDate {
+                        DatePicker("End date", selection: $model.recurringEndDate, displayedComponents: .date)
+                    }
+                }
+            }
+
+            Section("Note") {
+                TextField("Note", text: $model.note, axis: .vertical)
+                    .lineLimit(2...4)
+            }
         }
         .formStyle(.grouped)
     }

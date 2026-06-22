@@ -36,6 +36,13 @@ public final class ExpenseTransactionFormModel {
     public var date: Date = Date()
     public var selectedTagIds: Set<UUID> = []
     public var selectedAccountId: UUID?
+    public var note: String = ""
+
+    // Recurring schedule.
+    public var isRecurring: Bool = false
+    public var recurringFrequency: RecurringFrequency = .monthly
+    public var hasEndDate: Bool = false
+    public var recurringEndDate: Date = Date().monthsFromNow(12)
 
     public private(set) var categories: [ExpenseDomain.Category] = []
     public private(set) var availableTags: [ExpenseDomain.Tag] = []
@@ -69,6 +76,15 @@ public final class ExpenseTransactionFormModel {
             date = editing.date
             selectedTagIds = Set(editing.tags.map(\.id))
             selectedAccountId = editing.accountId
+            note = editing.note
+            if let recurrence = editing.recurrence {
+                isRecurring = true
+                recurringFrequency = recurrence.frequency
+                if let endDate = recurrence.endDate {
+                    hasEndDate = true
+                    recurringEndDate = endDate
+                }
+            }
         }
     }
 
@@ -135,13 +151,30 @@ public final class ExpenseTransactionFormModel {
         }
         transaction.tags = Set(selectedTagIds.compactMap { tagsById[$0] })
         transaction.accountId = selectedAccountId
+        transaction.note = note
+        transaction.recurrence = isRecurring
+            ? ExpenseDomain.Recurrence(
+                frequency: recurringFrequency,
+                endDate: hasEndDate ? recurringEndDate : nil
+              )
+            : nil
 
         let title = isEditing ? "Updating transaction" : "Saving transaction"
         guard errorPresenter.perform(title, {
             if isEditing {
+                // Editing updates the row in place; it does not regenerate the
+                // schedule's occurrences.
                 try repository.updateTransaction(transaction)
             } else {
                 try repository.addTransaction(transaction)
+                // A new recurring template also writes its generated occurrences.
+                // Open-ended schedules generate a year out, matching the legacy form.
+                if transaction.recurrence != nil {
+                    let until = hasEndDate ? recurringEndDate : Date().monthsFromNow(12)
+                    for occurrence in ExpenseDomain.recurringOccurrences(of: transaction, until: until) {
+                        try repository.addTransaction(occurrence)
+                    }
+                }
             }
         }) != nil else {
             return false
@@ -159,6 +192,9 @@ public final class ExpenseTransactionFormModel {
         descriptionText = ""
         selectedTagIds = []
         date = Date()
+        note = ""
+        isRecurring = false
+        hasEndDate = false
     }
 
     /// Parses an amount in European or US notation into a positive magnitude.
