@@ -170,14 +170,14 @@ under P1 → "Adopt `ExpenseRepository` end-to-end".
 
 ## P2 — UX / UI
 
-- [ ] **Localization.** Docs say documents are mostly Spanish/Italian, but UI
-  strings are English-only and dates use a fixed `"d MMM"` format ignoring
-  locale (`Date+Extensions.swift:45`). Add `String(localized:)` + locale-aware
-  formatting; consider ES/IT localizations.
-- [ ] **Consistent money input.** `MenuBarQuickAdd` parses amounts with a
-  hand-rolled `Double(amount.replacing(",", "."))` (`MenuBarQuickAdd.swift:36,123`)
-  instead of the locale-aware `MoneyParser` used elsewhere — inconsistent with
-  the European-notation goal.
+- [~] **Localization.** Date formatting is now **locale-aware** —
+  `Date.shortDateString` / `monthYearString` order day/month/year per locale via
+  `FormatterCache.localizedTemplate` (en_US "Mar 14" vs it_IT "14 mar"). *(PR #50.)*
+  Still pending: UI strings are English-only — add `String(localized:)` and
+  consider ES/IT localizations.
+- [x] **Consistent money input.** Resolved by the menu-bar port: `MenuBarQuickAdd`
+  is a thin shell over `ExpenseTransactionFormModel`, which parses amounts with
+  the locale-aware `MoneyParser` (no hand-rolled `Double` cast remains).
 - [ ] **Empty/loading/error states** across views; **undo** for delete;
   confirm-before-destruct on account/budget deletion.
 - [ ] **Accessibility:** VoiceOver labels on icon-only controls, Dynamic Type,
@@ -187,9 +187,11 @@ under P1 → "Adopt `ExpenseRepository` end-to-end".
 
 ## P2 — quality / infra
 
-- [ ] **Tests for the UI-facing layers.** Strong unit coverage on parsing/stats;
-  add tests for `DataService` filtering/sorting, budget period math, and (via
-  `ViewInspector` or model-level view models) the view logic.
+- [~] **Tests for the UI-facing layers.** Strong unit coverage on parsing/stats;
+  `DataService` filtering/sorting (`DataServiceTests`) and **budget period math**
+  (`BudgetPeriodRangeTests` — start-of-month + previous-month branches via an
+  injectable `now`, PR #51) are covered. Remaining: view logic via `ViewInspector`
+  or model-level view models.
 - [ ] **CI hardening:** treat warnings as errors for the new code; add SwiftLint;
   upload/inspect `.xcresult` on failure.
 - [ ] **Concurrency:** audit for Swift 6 mode (the new `EnvironmentKey`
