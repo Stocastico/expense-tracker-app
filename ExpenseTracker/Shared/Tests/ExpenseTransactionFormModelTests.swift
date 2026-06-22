@@ -160,6 +160,102 @@ struct ExpenseTransactionFormModelTests {
         #expect(saved)
     }
 
+    @Test("Saving a recurring expense stores the schedule and generates its occurrences")
+    func savesRecurringWithOccurrences() throws {
+        let (model, repository, presenter) = makeModel()
+        let casa = try #require(model.categories.first { $0.displayName == "Casa" })
+        let cal = Calendar.current
+        model.type = .expense
+        model.amountText = "30"
+        model.selectedCategoryId = casa.id
+        model.date = try #require(cal.date(from: DateComponents(year: 2026, month: 1, day: 10)))
+        model.isRecurring = true
+        model.recurringFrequency = .monthly
+        model.hasEndDate = true
+        model.recurringEndDate = try #require(cal.date(from: DateComponents(year: 2026, month: 4, day: 10)))
+
+        #expect(model.save())
+        #expect(presenter.currentError == nil)
+
+        let stored = try repository.transactions()
+        // The template plus three monthly occurrences (Feb, Mar, Apr).
+        #expect(stored.count == 4)
+        let parent = try #require(stored.first { $0.recurringParentId == nil })
+        #expect(parent.recurrence == ExpenseDomain.Recurrence(frequency: .monthly, endDate: model.recurringEndDate))
+        #expect(stored.filter { $0.recurringParentId == parent.id }.count == 3)
+    }
+
+    @Test("A non-recurring save stores a single transaction with no schedule")
+    func savesNonRecurringSingle() throws {
+        let (model, repository, _) = makeModel()
+        model.type = .income
+        model.amountText = "100"
+
+        #expect(model.save())
+        let stored = try repository.transactions()
+        #expect(stored.count == 1)
+        #expect(stored[0].recurrence == nil)
+        #expect(stored[0].recurringParentId == nil)
+    }
+
+    @Test("Saving stores the entered note")
+    func savesNote() throws {
+        let (model, repository, _) = makeModel()
+        model.type = .income
+        model.amountText = "10"
+        model.note = "rent for June"
+
+        #expect(model.save())
+        #expect(try repository.transactions()[0].note == "rent for June")
+    }
+
+    @Test("Editing prefills recurrence and note")
+    func editingPrefillsRecurrenceAndNote() {
+        let end = Date(timeIntervalSince1970: 2_000_000_000)
+        let original = ExpenseDomain.Transaction(
+            amount: Decimal(string: "5.00")!,
+            type: .expense,
+            note: "keep",
+            recurrence: ExpenseDomain.Recurrence(frequency: .weekly, endDate: end)
+        )
+        let model = ExpenseTransactionFormModel(
+            repository: ExpenseDomain.InMemoryRepository.seeded(),
+            errorPresenter: ExpenseErrorPresenter(),
+            editing: original
+        )
+        model.load()
+        #expect(model.isRecurring)
+        #expect(model.recurringFrequency == .weekly)
+        #expect(model.hasEndDate)
+        #expect(model.recurringEndDate == end)
+        #expect(model.note == "keep")
+    }
+
+    @Test("Editing a recurring transaction updates in place, without generating occurrences")
+    func editingRecurringDoesNotGenerate() throws {
+        let repository = ExpenseDomain.InMemoryRepository.seeded()
+        let original = ExpenseDomain.Transaction(
+            amount: Decimal(string: "10.00")!,
+            type: .expense,
+            recurrence: ExpenseDomain.Recurrence(
+                frequency: .monthly,
+                endDate: Date(timeIntervalSince1970: 2_000_000_000)
+            )
+        )
+        try repository.addTransaction(original)
+
+        let model = ExpenseTransactionFormModel(
+            repository: repository,
+            errorPresenter: ExpenseErrorPresenter(),
+            editing: original
+        )
+        model.load()
+        model.amountText = "12"
+
+        #expect(model.save())
+        #expect(try repository.transactions().count == 1) // updated, not multiplied
+    }
+
     @Test("reset() clears entry fields for a fresh quick add, keeping type, category and account")
     func resetClearsEntryFieldsKeepingContext() throws {
         let (model, _, _) = makeModel()
