@@ -160,6 +160,39 @@ struct ExpenseTransactionFormModelTests {
         #expect(saved)
     }
 
+    @Test("reset() clears entry fields for a fresh quick add, keeping type, category and account")
+    func resetClearsEntryFieldsKeepingContext() throws {
+        let (model, _, _) = makeModel()
+        let casa = try #require(model.categories.first { $0.displayName == "Casa" })
+        let account = UUID()
+        model.type = .expense
+        model.amountText = "9,99"
+        model.merchant = "Shop"
+        model.descriptionText = "stuff"
+        model.selectedCategoryId = casa.id
+        let bollette = try #require(model.subcategories.first { $0.displayName == "bollette" })
+        model.selectedSubcategoryId = bollette.id
+        let tag = try #require(model.availableTags.first)
+        model.selectedTagIds = [tag.id]
+        model.selectedAccountId = account
+        model.date = Date(timeIntervalSince1970: 1_000_000)
+
+        model.reset()
+
+        // Per-entry content is cleared.
+        #expect(model.amountText == "")
+        #expect(model.merchant == "")
+        #expect(model.descriptionText == "")
+        #expect(model.selectedTagIds.isEmpty)
+        #expect(model.date.timeIntervalSinceNow > -5) // reset to ~now
+
+        // Context likely reused for the next quick entry is preserved.
+        #expect(model.type == .expense)
+        #expect(model.selectedCategoryId == casa.id)
+        #expect(model.selectedSubcategoryId == bollette.id)
+        #expect(model.selectedAccountId == account)
+    }
+
     @Test("Editing prefills the amount in a parseable form")
     func editingPrefillsAmount() throws {
         let repository = ExpenseDomain.InMemoryRepository.seeded()
