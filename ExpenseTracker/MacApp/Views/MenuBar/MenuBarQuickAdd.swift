@@ -47,6 +47,9 @@ struct MenuBarQuickAdd: View {
 
         TextField("Description", text: $model.descriptionText)
             .textFieldStyle(.roundedBorder)
+            // No merchant field here, so the learned category is keyed on the
+            // description; offer it when the field is submitted.
+            .onSubmit { model.suggestCategory() }
 
         if model.type == .expense {
             Picker("Category", selection: $model.selectedCategoryId) {
