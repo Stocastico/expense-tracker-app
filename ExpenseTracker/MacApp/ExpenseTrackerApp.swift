@@ -14,7 +14,8 @@ struct ExpenseTrackerApp: App {
         ExpenseCategoryRecord.self,
         ExpenseSubcategoryRecord.self,
         ExpenseTagRecord.self,
-        ExpenseTransactionRecord.self
+        ExpenseTransactionRecord.self,
+        ExpenseCategoryRuleRecord.self
     ]
 
     let modelContainer: ModelContainer

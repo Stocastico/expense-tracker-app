@@ -126,6 +126,39 @@ public final class ExpenseTransactionRecord {
     }
 }
 
+/// A learned category rule: a normalised merchant/description key mapped to a
+/// two-level category assignment. The SwiftData representation of
+/// `ExpenseDomain.CategoryRule`; `key` is unique so relearning a merchant
+/// updates the rule in place rather than duplicating it.
+@Model
+public final class ExpenseCategoryRuleRecord {
+    @Attribute(.unique) public var id: UUID
+    @Attribute(.unique) public var key: String
+    public var categoryId: UUID
+    public var subcategoryId: UUID?
+    public var hitCount: Int
+    public var createdAt: Date
+    public var updatedAt: Date
+
+    public init(
+        id: UUID,
+        key: String,
+        categoryId: UUID,
+        subcategoryId: UUID?,
+        hitCount: Int,
+        createdAt: Date,
+        updatedAt: Date
+    ) {
+        self.id = id
+        self.key = key
+        self.categoryId = categoryId
+        self.subcategoryId = subcategoryId
+        self.hitCount = hitCount
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
 /// The model types making up the expense persistence schema. Use this to build
 /// a `ModelContainer` (and to keep these records separate from the app's
 /// existing `Transaction`/`Account`/… schema).
@@ -135,5 +168,6 @@ public enum ExpenseSwiftDataSchema {
         ExpenseSubcategoryRecord.self,
         ExpenseTagRecord.self,
         ExpenseTransactionRecord.self,
+        ExpenseCategoryRuleRecord.self,
     ]
 }

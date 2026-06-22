@@ -15,6 +15,8 @@ extension ExpenseDomain {
         private var storedCatalog: Catalog
         private var storedTags: [Tag]
         private var storedTransactions: [Transaction]
+        /// Learned category rules, keyed by their normalised lookup key.
+        private var storedRules: [String: CategoryRule] = [:]
 
         public init(
             catalog: Catalog = Catalog(categories: [], subcategories: []),
@@ -40,6 +42,12 @@ extension ExpenseDomain {
         public func tags() throws -> [Tag] { storedTags }
         public func transactions() throws -> [Transaction] { storedTransactions }
 
+        public func categoryRules() throws -> [CategoryRule] {
+            storedRules.values.sorted {
+                $0.hitCount != $1.hitCount ? $0.hitCount > $1.hitCount : $0.key < $1.key
+            }
+        }
+
         // MARK: Catalog & tags
 
         public func saveCatalog(_ catalog: Catalog) throws {
@@ -52,6 +60,10 @@ extension ExpenseDomain {
             } else {
                 storedTags.append(tag)
             }
+        }
+
+        public func saveCategoryRule(_ rule: CategoryRule) throws {
+            storedRules[rule.key] = rule
         }
 
         // MARK: Transactions

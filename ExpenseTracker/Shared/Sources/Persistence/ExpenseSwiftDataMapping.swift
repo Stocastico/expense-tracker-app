@@ -89,3 +89,40 @@ extension ExpenseTransactionRecord {
         )
     }
 }
+
+extension ExpenseCategoryRuleRecord {
+    /// Creates a record from a domain category rule.
+    public convenience init(from rule: ExpenseDomain.CategoryRule) {
+        self.init(
+            id: rule.id,
+            key: rule.key,
+            categoryId: rule.categoryId,
+            subcategoryId: rule.subcategoryId,
+            hitCount: rule.hitCount,
+            createdAt: rule.createdAt,
+            updatedAt: rule.updatedAt
+        )
+    }
+
+    /// Copies a domain rule's mutable fields onto this existing record, keeping
+    /// the record's identity (matched on the unique `key`).
+    public func update(from rule: ExpenseDomain.CategoryRule) {
+        categoryId = rule.categoryId
+        subcategoryId = rule.subcategoryId
+        hitCount = rule.hitCount
+        updatedAt = rule.updatedAt
+    }
+
+    /// Reconstructs the domain rule from this record.
+    public func toDomain() -> ExpenseDomain.CategoryRule {
+        ExpenseDomain.CategoryRule(
+            id: id,
+            key: key,
+            categoryId: categoryId,
+            subcategoryId: subcategoryId,
+            hitCount: hitCount,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+    }
+}
