@@ -33,14 +33,16 @@ extension Date {
         return calendar.date(byAdding: .second, value: -1, to: nextYear) ?? self
     }
 
-    /// Returns a string like "March 2026".
+    /// The month and year, ordered and named for the current locale
+    /// (e.g. "March 2026" in en_US, "marzo 2026" in it_IT).
     public var monthYearString: String {
-        return FormatterCache.dateFormat("MMMM yyyy").string(from: self)
+        return FormatterCache.localizedTemplate("MMMMyyyy").string(from: self)
     }
 
-    /// Returns a string like "14 Mar".
+    /// A short day-and-month string, ordered for the current locale
+    /// (e.g. "Mar 14" in en_US, "14 mar" in it_IT).
     public var shortDateString: String {
-        return FormatterCache.dateFormat("d MMM").string(from: self)
+        return FormatterCache.localizedTemplate("dMMM").string(from: self)
     }
 
     /// Checks whether this date falls in the same calendar month as another date.

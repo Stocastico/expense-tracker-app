@@ -10,6 +10,7 @@ public enum FormatterCache {
     private static let lock = NSLock()
     private static var currencyByCode: [String: NumberFormatter] = [:]
     private static var byDateFormat: [String: DateFormatter] = [:]
+    private static var byTemplate: [String: DateFormatter] = [:]
 
     /// A currency formatter (2 fraction digits) for the given ISO 4217 code.
     public static func currency(code: String) -> NumberFormatter {
@@ -37,6 +38,25 @@ public enum FormatterCache {
         let formatter = DateFormatter()
         formatter.dateFormat = format
         byDateFormat[format] = formatter
+        return formatter
+    }
+
+    /// A `DateFormatter` whose field *ordering* follows `locale`, built from a
+    /// skeleton template (e.g. `"dMMM"`, `"MMMMyyyy"`) via
+    /// `setLocalizedDateFormatFromTemplate`. Unlike `dateFormat(_:)`, which pins
+    /// a literal pattern, this reorders day/month/year per the locale's
+    /// conventions (en_US "Mar 14" vs it_IT "14 mar"). Cached per locale+template.
+    public static func localizedTemplate(_ template: String, locale: Locale = .current) -> DateFormatter {
+        lock.lock()
+        defer { lock.unlock() }
+        let key = "\(locale.identifier)|\(template)"
+        if let existing = byTemplate[key] {
+            return existing
+        }
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.setLocalizedDateFormatFromTemplate(template)
+        byTemplate[key] = formatter
         return formatter
     }
 
