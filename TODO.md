@@ -104,14 +104,18 @@ under P1 → "Adopt `ExpenseRepository` end-to-end".
   **All transaction *readers* now go through the repository.** What remains
   before the legacy Transactions screen can be deleted:
 
-  - **Port the *writers* to the domain** — manual `TransactionFormView`, menu-bar
-    quick-add, and **Import Statement / Scan Receipts** currently write legacy
-    `Transaction` (reaching the domain only via the write-through). **Blocked
-    first on a domain-model gap:** `ExpenseDomain.Transaction` has no
-    `recurring*`/`receiptData` fields, so a faithful writer port would drop
-    recurring schedules and receipt images. **Next step is to model recurring +
-    receipts in the domain** (with migration), *then* swap the writers onto
-    `ExpenseRepository`.
+  - **Domain now models recurring + receipts** — `ExpenseDomain.Transaction`
+    carries a `recurrence` (the new `ExpenseDomain.Recurrence`: required
+    frequency + optional end date), a `recurringParentId` for generated
+    occurrences, and `receiptData`; `ExpenseTransactionRecord` stores them
+    (receipt via `@Attribute(.externalStorage)`), mapping round-trips them, and
+    `LegacyExpenseMigration` carries them across. This clears the domain-model
+    gap that blocked the writer port.
+  - **Port the *writers* to the domain** — manual `TransactionFormView`,
+    menu-bar quick-add, and **Import Statement / Scan Receipts** still write
+    legacy `Transaction` (reaching the domain only via the write-through). Now
+    that the domain models recurring schedules + receipts, swap these writers
+    onto `ExpenseRepository` without losing data. **This is the next step.**
   - **Then** delete the legacy Transactions screen + "(beta)" label and retire
     the `Double` `@Model` types + `DataService`.
   - **Analytics grouping** by the two-level catalog (deferred).
