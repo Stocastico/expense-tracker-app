@@ -402,6 +402,34 @@ struct ExpenseTransactionFormModelTests {
         #expect(model.selectedSubcategoryId == bollette.id)
     }
 
+    @Test("suggestCategory does not override a category the user already picked")
+    func suggestCategoryDoesNotOverrideManualChoice() throws {
+        let repository = ExpenseDomain.InMemoryRepository.seeded()
+        let presenter = ExpenseErrorPresenter()
+
+        // Teach "Mercadona → Casa".
+        let teacher = ExpenseTransactionFormModel(repository: repository, errorPresenter: presenter)
+        teacher.load()
+        let casa = try #require(teacher.categories.first { $0.displayName == "Casa" })
+        teacher.type = .expense
+        teacher.amountText = "20"
+        teacher.merchant = "Mercadona"
+        teacher.selectedCategoryId = casa.id
+        #expect(teacher.save())
+
+        // The user has already chosen a different category for this new entry.
+        let model = ExpenseTransactionFormModel(repository: repository, errorPresenter: presenter)
+        model.load()
+        let other = try #require(model.categories.first { $0.displayName != "Casa" })
+        model.type = .expense
+        model.selectedCategoryId = other.id
+        model.merchant = "Mercadona"
+        model.suggestCategory()
+
+        // The manual choice wins; the suggestion does not clobber it.
+        #expect(model.selectedCategoryId == other.id)
+    }
+
     @Test("suggestCategory leaves the selection untouched for an unknown merchant")
     func suggestCategoryUnknownMerchant() {
         let (model, _, _) = makeModel()
