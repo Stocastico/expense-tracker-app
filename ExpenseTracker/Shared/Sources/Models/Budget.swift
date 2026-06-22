@@ -51,10 +51,10 @@ extension Budget {
         }
     }
 
-    /// Returns the date range for the current budget period.
-    public func currentPeriodRange(startOfMonth: Int = 1) -> (start: Date, end: Date) {
+    /// Returns the date range for the current budget period. `now` is injectable
+    /// for deterministic testing and defaults to the present.
+    public func currentPeriodRange(startOfMonth: Int = 1, now: Date = Date()) -> (start: Date, end: Date) {
         let calendar = Calendar.current
-        let now = Date()
 
         switch period {
         case .monthly:
