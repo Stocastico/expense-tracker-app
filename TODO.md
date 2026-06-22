@@ -118,9 +118,10 @@ under P1 → "Adopt `ExpenseRepository` end-to-end".
       through `@Environment(\.expenseRepository)` (Decimal, two-level
       category/subcategory, account) and surfacing failures via the presenter.
       Stays open for repeated entries via `ExpenseTransactionFormModel.reset()`.
-      Dropped the flat-category `CategoryRuleService` auto-suggest on this
-      surface; the two-level learner now exists, so re-wiring quick-add suggest
-      is a possible follow-up.
+      Learns on save and now **suggests** again on the two-level catalog: the
+      Description field calls `suggestCategory()` (keyed on the description, as
+      the quick-add has no merchant field), restoring the auto-suggest it dropped
+      when it was ported. *(PR #46.)*
     - [~] **Manual `TransactionFormView`** — bringing the rich form's
       capabilities onto the domain `ExpenseTransactionFormModel` /
       `AddDomainTransactionView` (additive; the legacy screen stays put until the
@@ -135,7 +136,20 @@ under P1 → "Adopt `ExpenseRepository` end-to-end".
       pick). Still to port: **receipt image + OCR** (`receiptData` round-trips
       already; needs the file-pick/OCR UI) — see `BUILD-MACHINE-TODO.md`, as it
       can only be built/verified on a macOS-15 + Xcode-16 machine.
-    - [ ] **Import Statement / Scan Receipts** — batch writers.
+    - [~] **Import Statement** — the testable **writer core** is ported:
+      `StatementImportModel` (`@Observable`) turns parsed `StatementEntry`s into
+      editable drafts (learned-category suggestion, `.ignored` rows
+      pre-deselected) and writes the selected ones through `ExpenseRepository` as
+      domain `Transaction`s (Decimal via `MoneyParser`, two-level category,
+      account), reinforcing each description → category in the
+      `CategoryLearner`. *(PR #48.)* **Remaining:** swap `PDFImportView`'s review
+      table to bind to this model (Decimal amount + two-level category pickers)
+      and retire its legacy `DataService`/`CategoryRuleService` write — a
+      build-machine task (see `BUILD-MACHINE-TODO.md`), since the file-pick + PDF
+      parse + review UI can only be run/verified on a macOS-15 + Xcode-16 Mac.
+      The pure parsing (`StatementParser`/`StatementCSVParser`) is unchanged and
+      already tested.
+    - [ ] **Scan Receipts** — batch OCR writer (build machine; OCR can't run in CI).
   - **Then** delete the legacy Transactions screen + "(beta)" label and retire
     the `Double` `@Model` types + `DataService`.
   - **Analytics grouping** by the two-level catalog (deferred).

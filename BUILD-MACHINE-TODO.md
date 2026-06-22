@@ -51,7 +51,39 @@ output in CI; the picker + OCR pre-fill can only be verified by running the app.
 Keep the pure parsing (`ReceiptParser`, `ReceiptImportPipeline`) under unit
 tests as today — only the Vision/UI seam needs manual verification.
 
-## 2. Manually verify the existing OCR surfaces
+## 2. Swap the Import Statement review UI onto `StatementImportModel`
+
+The **writer core** of the Import Statement port is done and unit-tested:
+`StatementImportModel` (`Shared/Sources/Presentation/`) turns parsed
+`StatementEntry`s into editable drafts and writes the selected rows through
+`ExpenseRepository` (Decimal, two-level category, account, with category
+learning). Tests: `StatementImportModelTests`.
+
+What's left is **UI-only**, and best done where the flow can actually be run:
+
+- Rebuild `PDFImportView`'s review step to hold a `StatementImportModel`
+  (injected `@Environment(\.expenseRepository)` + `ExpenseErrorPresenter`),
+  binding the table to `$model.drafts[i]` and using **two-level** category /
+  subcategory pickers from `model.categories` / `model.subcategories(for:)`
+  instead of the flat `DefaultCategories`. The amount column is already text;
+  it now parses as `Decimal`.
+- Replace `importSelectedTransactions()`'s legacy `DataService` +
+  `CategoryRuleService` write with `model.importSelected()`.
+- Keep the file pick + parse (`parseStatement`) as-is — `StatementParser` /
+  `StatementCSVParser` are pure and unchanged.
+
+**Why a build machine:** the file picker (`NSOpenPanel`), PDF text extraction
+(`PDFImportService`) and the SwiftUI review `Table` can't be exercised in CI;
+verify by importing a real PDF/CSV and confirming rows land as domain
+transactions with the right category/amount/account.
+
+**Possible follow-up (CI-testable, can be done from anywhere):** a two-level
+category *keyword heuristic* to seed an initial category when nothing is learned
+yet — today `StatementImportModel` suggests only from learned rules, where the
+legacy flow also used `DefaultCategories.detectCategory`. That detector is keyed
+on the flat catalog; a domain equivalent is pure logic and unit-testable.
+
+## 3. Manually verify the existing OCR surfaces
 
 `ReceiptScanImportView` (batch "Scan Receipts": multi-image pick → on-device OCR
 → editable draft review → save) and, once built, the new single-receipt form
@@ -63,7 +95,7 @@ click through:
 - a non-receipt / unreadable image degrades gracefully (no crash, surfaced
   error via `ExpenseErrorPresenter`).
 
-## 3. Validate the Foundation Models categorization engine (needs macOS 26)
+## 4. Validate the Foundation Models categorization engine (needs macOS 26)
 
 `FoundationModelsCategorizationEngine` is gated behind
 `@available(macOS 26, *)` / `#if canImport(FoundationModels)` and has **never run
@@ -73,7 +105,7 @@ on a real toolchain** (`TODO.md` P1). On a macOS 26 machine with the framework:
 - add a runtime **fallback path test** for when the model is unavailable or
   declines, so categorization always falls back to the heuristic engine.
 
-## 4. Distribution (when ready to ship)
+## 5. Distribution (when ready to ship)
 
 App icon, `Info.plist` polish, hardened runtime, and a notarization / signing
 story for sharing builds (`TODO.md` P2 → "Distribution"). All require Xcode +
