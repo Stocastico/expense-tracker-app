@@ -192,9 +192,10 @@ public final class ExpenseTransactionFormModel {
     /// Applies the category/subcategory learned for the current merchant (or
     /// description) to the pickers, if one was previously learned. Intended to be
     /// called by the view when the merchant field changes. No-op for income
-    /// (which is never categorized) and for unknown merchants.
+    /// (which is never categorized), for unknown merchants, and when the user has
+    /// already chosen a category (a manual choice is never overwritten).
     public func suggestCategory() {
-        guard type == .expense else { return }
+        guard type == .expense, selectedCategoryId == nil else { return }
         guard let rules = errorPresenter.perform("Loading learned categories", {
             try repository.categoryRules()
         }) else {

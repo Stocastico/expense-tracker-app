@@ -119,17 +119,22 @@ under P1 → "Adopt `ExpenseRepository` end-to-end".
       category/subcategory, account) and surfacing failures via the presenter.
       Stays open for repeated entries via `ExpenseTransactionFormModel.reset()`.
       Dropped the flat-category `CategoryRuleService` auto-suggest on this
-      surface (no domain learning store yet — revisit when categorization is
-      ported).
+      surface; the two-level learner now exists, so re-wiring quick-add suggest
+      is a possible follow-up.
     - [~] **Manual `TransactionFormView`** — bringing the rich form's
       capabilities onto the domain `ExpenseTransactionFormModel` /
       `AddDomainTransactionView` (additive; the legacy screen stays put until the
       whole legacy Transactions screen is retired). Done: **recurring schedules**
       (pure `ExpenseDomain.recurringOccurrences(of:until:)` — template + generated
-      occurrences) and an editable **note**. Still to port: **receipt image +
-      OCR** (`receiptData` round-trips already; needs the file-pick/OCR UI) and
-      **category learning** (`CategoryRuleService` is keyed on the flat catalog —
-      needs a two-level equivalent).
+      occurrences), an editable **note**, and **category learning** — the pure
+      two-level `ExpenseDomain.CategoryLearner` (PR #42), persisted through the
+      repository as `categoryRules()`/`saveCategoryRule(_:)` (PR #43), and wired
+      into the form (PR #44): a categorized expense learns its merchant →
+      category/subcategory on save, and `suggestCategory()` fills the pickers for
+      a known merchant (only when none is chosen, so it never clobbers a manual
+      pick). Still to port: **receipt image + OCR** (`receiptData` round-trips
+      already; needs the file-pick/OCR UI) — see `BUILD-MACHINE-TODO.md`, as it
+      can only be built/verified on a macOS-15 + Xcode-16 machine.
     - [ ] **Import Statement / Scan Receipts** — batch writers.
   - **Then** delete the legacy Transactions screen + "(beta)" label and retire
     the `Double` `@Model` types + `DataService`.
