@@ -171,7 +171,9 @@ public final class ExpenseTransactionFormModel {
         }
 
         let title = isEditing ? "Updating transaction" : "Saving transaction"
-        let outcome = errorPresenter.perform(title) { () throws -> Void in
+        // Return a Bool sentinel (rather than Void) so the result is a plain
+        // `Bool?` — `perform` over a Void closure infers `Void?`, which warns.
+        let stored = errorPresenter.perform(title) { () throws -> Bool in
             if isEditing {
                 try repository.updateTransaction(transaction)
             } else {
@@ -180,8 +182,9 @@ public final class ExpenseTransactionFormModel {
                     try repository.addTransaction(occurrence)
                 }
             }
+            return true
         }
-        guard outcome != nil else { return false }
+        guard stored == true else { return false }
         // Best-effort: remember this merchant's category so future entries can be
         // pre-filled. Runs after the transaction is safely stored.
         learnCategory(merchant: transaction.merchant, category: category, subcategory: subcategory)
