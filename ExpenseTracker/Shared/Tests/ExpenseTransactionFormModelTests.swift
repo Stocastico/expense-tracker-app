@@ -331,6 +331,107 @@ struct ExpenseTransactionFormModelTests {
         #expect(try repository.transactions()[0].merchant == nil)
     }
 
+    // MARK: - Category learning
+
+    @Test("Saving a categorized expense learns the merchant's category")
+    func savingExpenseLearnsCategory() throws {
+        let (model, repository, _) = makeModel()
+        let casa = try #require(model.categories.first { $0.displayName == "Casa" })
+        model.type = .expense
+        model.amountText = "20"
+        model.merchant = "Mercadona"
+        model.selectedCategoryId = casa.id
+        let bollette = try #require(model.subcategories.first { $0.displayName == "bollette" })
+        model.selectedSubcategoryId = bollette.id
+
+        #expect(model.save())
+
+        let rule = try #require(repository.categoryRules().first { $0.key == "mercadona" })
+        #expect(rule.categoryId == casa.id)
+        #expect(rule.subcategoryId == bollette.id)
+    }
+
+    @Test("Saving income learns nothing (income is never categorized)")
+    func savingIncomeLearnsNothing() throws {
+        let (model, repository, _) = makeModel()
+        model.type = .income
+        model.amountText = "1000"
+        model.merchant = "Employer"
+
+        #expect(model.save())
+        #expect(try repository.categoryRules().isEmpty)
+    }
+
+    @Test("Saving an uncategorized expense learns nothing")
+    func savingUncategorizedExpenseLearnsNothing() throws {
+        let (model, repository, _) = makeModel()
+        model.type = .expense
+        model.amountText = "20"
+        model.merchant = "Mystery"
+
+        #expect(model.save())
+        #expect(try repository.categoryRules().isEmpty)
+    }
+
+    @Test("suggestCategory fills the pickers from a previously learned merchant")
+    func suggestCategoryAppliesLearnedAssignment() throws {
+        let repository = ExpenseDomain.InMemoryRepository.seeded()
+        let presenter = ExpenseErrorPresenter()
+
+        // First entry teaches "Mercadona → Casa / bollette".
+        let teacher = ExpenseTransactionFormModel(repository: repository, errorPresenter: presenter)
+        teacher.load()
+        let casa = try #require(teacher.categories.first { $0.displayName == "Casa" })
+        teacher.type = .expense
+        teacher.amountText = "20"
+        teacher.merchant = "Mercadona"
+        teacher.selectedCategoryId = casa.id
+        let bollette = try #require(teacher.subcategories.first { $0.displayName == "bollette" })
+        teacher.selectedSubcategoryId = bollette.id
+        #expect(teacher.save())
+
+        // A fresh entry for the same merchant (different branch number) gets it applied.
+        let model = ExpenseTransactionFormModel(repository: repository, errorPresenter: presenter)
+        model.load()
+        model.type = .expense
+        model.merchant = "MERCADONA 1234 BILBAO"
+        model.suggestCategory()
+
+        #expect(model.selectedCategoryId == casa.id)
+        #expect(model.selectedSubcategoryId == bollette.id)
+    }
+
+    @Test("suggestCategory leaves the selection untouched for an unknown merchant")
+    func suggestCategoryUnknownMerchant() {
+        let (model, _, _) = makeModel()
+        model.type = .expense
+        model.merchant = "Totally Unknown Shop"
+        model.suggestCategory()
+        #expect(model.selectedCategoryId == nil)
+        #expect(model.selectedSubcategoryId == nil)
+    }
+
+    @Test("suggestCategory does nothing for income")
+    func suggestCategoryIgnoredForIncome() throws {
+        let repository = ExpenseDomain.InMemoryRepository.seeded()
+        let presenter = ExpenseErrorPresenter()
+        let teacher = ExpenseTransactionFormModel(repository: repository, errorPresenter: presenter)
+        teacher.load()
+        let casa = try #require(teacher.categories.first { $0.displayName == "Casa" })
+        teacher.type = .expense
+        teacher.amountText = "20"
+        teacher.merchant = "Mercadona"
+        teacher.selectedCategoryId = casa.id
+        #expect(teacher.save())
+
+        let model = ExpenseTransactionFormModel(repository: repository, errorPresenter: presenter)
+        model.load()
+        model.type = .income
+        model.merchant = "Mercadona"
+        model.suggestCategory()
+        #expect(model.selectedCategoryId == nil)
+    }
+
     @Test("Editing prefills merchant, description and date")
     func editingPrefillsDetails() {
         let repository = ExpenseDomain.InMemoryRepository.seeded()
