@@ -6,10 +6,13 @@ structure or conventions change.
 
 ## How to build & test
 
-- **No local builds in this environment.** Sessions run on Linux; the app is
-  macOS-only (SwiftUI/SwiftData/Charts/Vision). There is no Xcode here, so
-  **CI is the build/test gate** — push the branch and read the GitHub Actions
-  result rather than trying to compile locally.
+- **No local builds — CI is the build/test gate.** The app is macOS-only and
+  targets macOS 15 / Xcode 16, so it can't be built here: sessions run either on
+  Linux (no Xcode) or on a Mac too old for the macOS-15 SDK (e.g. Ventura /
+  Xcode 15, which lacks it and can't run the target). Push the branch and read
+  the GitHub Actions result instead of compiling locally. Work that genuinely
+  needs a build-capable Mac (Vision/OCR, Foundation Models, the import review UI,
+  distribution) is collected in `BUILD-MACHINE-TODO.md`.
 - CI (`.github/workflows/ci.yml`, runs on every push) does:
   `xcodegen generate` → `xcodebuild test -scheme ExpenseTrackerMac -destination "platform=macOS"`.
   A run takes ~1–1.5 min. A green "Build & Test (macOS)" job = compiles + all tests pass.
@@ -85,7 +88,9 @@ per PR, using the two-level domain catalog:**
 - **Menu-bar quick-add: ported.** `MenuBarQuickAdd` is a thin shell over
   `ExpenseTransactionFormModel`, writing through `@Environment(\.expenseRepository)`
   (`reset()` keeps the popover open for repeated entries). It no longer touches
-  `DataService` or the flat-category `CategoryRuleService` auto-suggest.
+  `DataService` or the flat-category `CategoryRuleService`. It learns on save and
+  **suggests** on the two-level catalog: the Description field calls
+  `suggestCategory()` (keyed on the description, as there's no merchant field).
 - **Manual form: in progress.** The domain form
   (`ExpenseTransactionFormModel` / `AddDomainTransactionView`) now supports
   **recurring schedules** (pure `ExpenseDomain.recurringOccurrences(of:until:)`
@@ -102,10 +107,19 @@ per PR, using the two-level domain catalog:**
   because it can only be built and verified on a macOS-15 + Xcode-16 Mac. The
   legacy `TransactionFormView` itself stays (writes legacy, mirrored to the
   domain) until the whole legacy Transactions screen is retired.
+- **Import Statement: writer core ported, UI swap pending.** The testable core
+  is `StatementImportModel` — it turns parsed `StatementEntry`s into editable
+  drafts and writes the selected ones through `ExpenseRepository` (Decimal,
+  two-level category, account), learning each description → category. Unlearned
+  expenses get a starter category from a two-level keyword heuristic
+  (`ExpenseDomain.CategoryKeywordMatcher` + the `DefaultExpenseKeywordRules`
+  Italian/Spanish seed; learned rules win). The live `PDFImportView` still uses
+  the legacy `DataService` writer until its review table is rebound onto this
+  model — a build-machine task (see `BUILD-MACHINE-TODO.md`).
 - **Still legacy (write to `DataService`, reach the domain via the bridge):**
-  Import Statement / Scan Receipts, and the legacy `TransactionFormView`. All
-  parse amounts with `MoneyParser.parsePositiveAmount` (PRs #38, #39). Keep the
-  legacy writer + write-through until each is ported.
+  Scan Receipts (OCR) and the legacy `TransactionFormView`. All parse amounts
+  with `MoneyParser.parsePositiveAmount` (PRs #38, #39). Keep the legacy writer +
+  write-through until each is ported.
 
 ## Dev principles (please follow without being asked)
 
