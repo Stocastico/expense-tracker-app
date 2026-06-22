@@ -97,35 +97,8 @@ struct AddDomainTransactionView: View {
                     }
                 }
             }
-
-            scheduleAndNoteSections(model)
         }
         .formStyle(.grouped)
-    }
-
-    /// The recurring-schedule controls and the note field. Extracted to keep the
-    /// `Form` builder small enough for the compiler to infer.
-    @ViewBuilder
-    private func scheduleAndNoteSections(_ model: ExpenseTransactionFormModel) -> some View {
-        @Bindable var model = model
-        Section {
-            Toggle("Recurring", isOn: $model.isRecurring)
-            if model.isRecurring {
-                Picker("Frequency", selection: $model.recurringFrequency) {
-                    ForEach(RecurringFrequency.allCases) { frequency in
-                        Text(frequency.displayName).tag(frequency)
-                    }
-                }
-                Toggle("End date", isOn: $model.hasEndDate)
-                if model.hasEndDate {
-                    DatePicker("End date", selection: $model.recurringEndDate, displayedComponents: .date)
-                }
-            }
-        }
-
-        Section("Note") {
-            TextField("Note", text: $model.note)
-        }
     }
 
     private func ensureModel() {
