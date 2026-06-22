@@ -430,6 +430,30 @@ struct ExpenseTransactionFormModelTests {
         #expect(model.selectedCategoryId == other.id)
     }
 
+    @Test("Learns and suggests from the description when no merchant is given (menu-bar path)")
+    func learnsAndSuggestsFromDescription() throws {
+        let repository = ExpenseDomain.InMemoryRepository.seeded()
+        let presenter = ExpenseErrorPresenter()
+
+        // The menu-bar quick-add has no merchant field — only a description.
+        let teacher = ExpenseTransactionFormModel(repository: repository, errorPresenter: presenter)
+        teacher.load()
+        let casa = try #require(teacher.categories.first { $0.displayName == "Casa" })
+        teacher.type = .expense
+        teacher.amountText = "20"
+        teacher.descriptionText = "Mercadona"
+        teacher.selectedCategoryId = casa.id
+        #expect(teacher.save())
+
+        // A fresh entry with the same description gets the category suggested.
+        let model = ExpenseTransactionFormModel(repository: repository, errorPresenter: presenter)
+        model.load()
+        model.type = .expense
+        model.descriptionText = "mercadona"
+        model.suggestCategory()
+        #expect(model.selectedCategoryId == casa.id)
+    }
+
     @Test("suggestCategory leaves the selection untouched for an unknown merchant")
     func suggestCategoryUnknownMerchant() {
         let (model, _, _) = makeModel()
