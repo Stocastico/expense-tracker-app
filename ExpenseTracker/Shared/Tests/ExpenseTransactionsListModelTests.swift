@@ -246,8 +246,10 @@ private struct FailingRepository: ExpenseRepository {
     func catalog() throws -> ExpenseDomain.Catalog { throw Boom() }
     func tags() throws -> [ExpenseDomain.Tag] { throw Boom() }
     func transactions() throws -> [ExpenseDomain.Transaction] { throw Boom() }
+    func categoryRules() throws -> [ExpenseDomain.CategoryRule] { throw Boom() }
     func saveCatalog(_ catalog: ExpenseDomain.Catalog) throws { throw Boom() }
     func saveTag(_ tag: ExpenseDomain.Tag) throws { throw Boom() }
+    func saveCategoryRule(_ rule: ExpenseDomain.CategoryRule) throws { throw Boom() }
     func addTransaction(_ transaction: ExpenseDomain.Transaction) throws { throw Boom() }
     func updateTransaction(_ transaction: ExpenseDomain.Transaction) throws { throw Boom() }
     func deleteTransaction(id: UUID) throws { throw Boom() }

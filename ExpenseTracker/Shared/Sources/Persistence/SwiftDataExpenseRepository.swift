@@ -45,6 +45,15 @@ public final class SwiftDataExpenseRepository: ExpenseRepository {
         return records.map { $0.toDomain() }
     }
 
+    public func categoryRules() throws -> [ExpenseDomain.CategoryRule] {
+        let records = try context.fetch(
+            FetchDescriptor<ExpenseCategoryRuleRecord>(
+                sortBy: [SortDescriptor(\.hitCount, order: .reverse), SortDescriptor(\.key)]
+            )
+        )
+        return records.map { $0.toDomain() }
+    }
+
     // MARK: Catalog & tags
 
     public func saveCatalog(_ catalog: ExpenseDomain.Catalog) throws {
@@ -75,6 +84,15 @@ public final class SwiftDataExpenseRepository: ExpenseRepository {
             existing.displayName = tag.displayName
         } else {
             context.insert(ExpenseTagRecord(id: tag.id, displayName: tag.displayName))
+        }
+        try context.save()
+    }
+
+    public func saveCategoryRule(_ rule: ExpenseDomain.CategoryRule) throws {
+        if let existing = try fetchCategoryRuleRecord(key: rule.key) {
+            existing.update(from: rule)
+        } else {
+            context.insert(ExpenseCategoryRuleRecord(from: rule))
         }
         try context.save()
     }
@@ -113,6 +131,12 @@ public final class SwiftDataExpenseRepository: ExpenseRepository {
 
     private func fetchTransactionRecord(id: UUID) throws -> ExpenseTransactionRecord? {
         var descriptor = FetchDescriptor<ExpenseTransactionRecord>(predicate: #Predicate { $0.id == id })
+        descriptor.fetchLimit = 1
+        return try context.fetch(descriptor).first
+    }
+
+    private func fetchCategoryRuleRecord(key: String) throws -> ExpenseCategoryRuleRecord? {
+        var descriptor = FetchDescriptor<ExpenseCategoryRuleRecord>(predicate: #Predicate { $0.key == key })
         descriptor.fetchLimit = 1
         return try context.fetch(descriptor).first
     }

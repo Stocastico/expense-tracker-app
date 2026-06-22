@@ -160,4 +160,47 @@ struct SwiftDataExpenseRepositoryTests {
         #expect(totals[casa] == Decimal(string: "800.00")!)
         #expect(totals.count == 1)
     }
+
+    // MARK: - Category rules
+
+    @Test("A learned category rule round-trips through SwiftData")
+    func categoryRuleRoundTrips() throws {
+        let repo = try makeRepository()
+        let category = UUID()
+        let subcategory = UUID()
+        let date = Date(timeIntervalSinceReferenceDate: 5000)
+        try repo.saveCategoryRule(ExpenseDomain.CategoryRule(
+            key: "mercadona", categoryId: category, subcategoryId: subcategory,
+            hitCount: 3, createdAt: date, updatedAt: date
+        ))
+
+        let loaded = try repo.categoryRules()
+        #expect(loaded.count == 1)
+        #expect(loaded.first?.key == "mercadona")
+        #expect(loaded.first?.categoryId == category)
+        #expect(loaded.first?.subcategoryId == subcategory)
+        #expect(loaded.first?.hitCount == 3)
+    }
+
+    @Test("Saving a rule for an existing key updates it in place, not duplicated")
+    func saveCategoryRuleUpsertsByKey() throws {
+        let repo = try makeRepository()
+        try repo.saveCategoryRule(ExpenseDomain.CategoryRule(key: "amazon", categoryId: UUID(), hitCount: 1))
+        let newCategory = UUID()
+        try repo.saveCategoryRule(ExpenseDomain.CategoryRule(key: "amazon", categoryId: newCategory, hitCount: 2))
+
+        let loaded = try repo.categoryRules()
+        #expect(loaded.count == 1)
+        #expect(loaded.first?.categoryId == newCategory)
+        #expect(loaded.first?.hitCount == 2)
+    }
+
+    @Test("Category rules are returned most-reinforced first")
+    func categoryRulesSortedByHitCount() throws {
+        let repo = try makeRepository()
+        try repo.saveCategoryRule(ExpenseDomain.CategoryRule(key: "mercadona", categoryId: UUID(), hitCount: 1))
+        try repo.saveCategoryRule(ExpenseDomain.CategoryRule(key: "spotify", categoryId: UUID(), hitCount: 2))
+
+        #expect(try repo.categoryRules().map(\.key) == ["spotify", "mercadona"])
+    }
 }

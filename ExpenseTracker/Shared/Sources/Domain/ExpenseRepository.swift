@@ -14,11 +14,16 @@ public protocol ExpenseRepository {
     func tags() throws -> [ExpenseDomain.Tag]
     /// All stored transactions.
     func transactions() throws -> [ExpenseDomain.Transaction]
+    /// All learned category rules, most-reinforced first.
+    func categoryRules() throws -> [ExpenseDomain.CategoryRule]
 
     /// Replaces the stored catalog wholesale.
     func saveCatalog(_ catalog: ExpenseDomain.Catalog) throws
     /// Inserts a tag, or updates the existing one with the same id.
     func saveTag(_ tag: ExpenseDomain.Tag) throws
+    /// Stores a learned category rule, replacing any existing rule with the same
+    /// normalised key (so relearning a merchant updates, never duplicates).
+    func saveCategoryRule(_ rule: ExpenseDomain.CategoryRule) throws
 
     /// Validates and stores a new transaction.
     func addTransaction(_ transaction: ExpenseDomain.Transaction) throws

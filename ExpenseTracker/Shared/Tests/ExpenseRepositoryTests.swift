@@ -132,4 +132,45 @@ struct ExpenseRepositoryTests {
         #expect(totals[spesa] == Decimal(string: "120.00")!)
         #expect(totals.count == 2)
     }
+
+    // MARK: - Category rules
+
+    @Test("A learned category rule round-trips through the in-memory store")
+    func categoryRuleRoundTrips() throws {
+        let repo = ExpenseDomain.InMemoryRepository()
+        let category = UUID()
+        let subcategory = UUID()
+        try repo.saveCategoryRule(ExpenseDomain.CategoryRule(
+            key: "mercadona", categoryId: category, subcategoryId: subcategory, hitCount: 2
+        ))
+
+        let loaded = try repo.categoryRules()
+        #expect(loaded.count == 1)
+        #expect(loaded.first?.key == "mercadona")
+        #expect(loaded.first?.categoryId == category)
+        #expect(loaded.first?.subcategoryId == subcategory)
+        #expect(loaded.first?.hitCount == 2)
+    }
+
+    @Test("Saving a rule for an existing key updates it in place, not duplicated")
+    func saveCategoryRuleUpsertsByKey() throws {
+        let repo = ExpenseDomain.InMemoryRepository()
+        try repo.saveCategoryRule(ExpenseDomain.CategoryRule(key: "amazon", categoryId: UUID(), hitCount: 1))
+        let newCategory = UUID()
+        try repo.saveCategoryRule(ExpenseDomain.CategoryRule(key: "amazon", categoryId: newCategory, hitCount: 2))
+
+        let loaded = try repo.categoryRules()
+        #expect(loaded.count == 1)
+        #expect(loaded.first?.categoryId == newCategory)
+        #expect(loaded.first?.hitCount == 2)
+    }
+
+    @Test("Category rules are returned most-reinforced first")
+    func categoryRulesSortedByHitCount() throws {
+        let repo = ExpenseDomain.InMemoryRepository()
+        try repo.saveCategoryRule(ExpenseDomain.CategoryRule(key: "mercadona", categoryId: UUID(), hitCount: 1))
+        try repo.saveCategoryRule(ExpenseDomain.CategoryRule(key: "spotify", categoryId: UUID(), hitCount: 2))
+
+        #expect(try repo.categoryRules().map(\.key) == ["spotify", "mercadona"])
+    }
 }
