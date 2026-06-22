@@ -74,17 +74,22 @@ current — `DataService` mirrors every legacy add/update/delete into
 `ExpenseTransactionRecord` (PR #34). On top of it, **all transaction readers now
 go through `ExpenseRepository`**: Dashboard (`DashboardFigures`, PR #35),
 Analytics (`DomainStatsService`, PR #36) and Budgets (`BudgetSpending`, PR #37),
-all computing in `Decimal`. **Writers still write legacy** (manual
-`TransactionFormView`, menu-bar quick-add, Import/Scan) and reach the domain only
-via the bridge. Manual entry now parses amounts with
-`MoneyParser.parsePositiveAmount` (PRs #38, #39). **The domain now models
-recurring schedules + receipts** — `ExpenseDomain.Transaction` carries a
-`recurrence` (`ExpenseDomain.Recurrence`: required frequency + optional end
-date), a `recurringParentId` for generated occurrences, and `receiptData`; the
-SwiftData record stores and round-trips them and migration carries them across.
-That clears the blocker, so the **next step is porting the writers
-onto `ExpenseRepository`** (manual `TransactionFormView`, menu-bar quick-add,
-Import/Scan). Until that lands, keep the legacy writer + write-through.
+all computing in `Decimal`. The **domain models recurring schedules + receipts**
+— `ExpenseDomain.Transaction` carries a `recurrence` (`ExpenseDomain.Recurrence`:
+required frequency + optional end date), a `recurringParentId` for generated
+occurrences, and `receiptData`; the SwiftData record stores and round-trips them
+and migration carries them across.
+
+**Writers are being ported onto `ExpenseRepository` incrementally — one writer
+per PR, using the two-level domain catalog:**
+- **Menu-bar quick-add: ported.** `MenuBarQuickAdd` is a thin shell over
+  `ExpenseTransactionFormModel`, writing through `@Environment(\.expenseRepository)`
+  (`reset()` keeps the popover open for repeated entries). It no longer touches
+  `DataService` or the flat-category `CategoryRuleService` auto-suggest.
+- **Still legacy (write to `DataService`, reach the domain via the bridge):** the
+  manual `TransactionFormView` (recurring + receipt OCR + category learning) and
+  Import/Scan. Both parse amounts with `MoneyParser.parsePositiveAmount` (PRs
+  #38, #39). Keep the legacy writer + write-through until each is ported.
 
 ## Dev principles (please follow without being asked)
 

@@ -111,11 +111,20 @@ under P1 → "Adopt `ExpenseRepository` end-to-end".
     (receipt via `@Attribute(.externalStorage)`), mapping round-trips them, and
     `LegacyExpenseMigration` carries them across. This clears the domain-model
     gap that blocked the writer port.
-  - **Port the *writers* to the domain** — manual `TransactionFormView`,
-    menu-bar quick-add, and **Import Statement / Scan Receipts** still write
-    legacy `Transaction` (reaching the domain only via the write-through). Now
-    that the domain models recurring schedules + receipts, swap these writers
-    onto `ExpenseRepository` without losing data. **This is the next step.**
+  - **Port the *writers* to the domain** (incremental, one writer per PR; ported
+    writers use the two-level domain catalog):
+    - [x] **Menu-bar quick-add** — now a thin shell over
+      `ExpenseTransactionFormModel`, writing an `ExpenseDomain.Transaction`
+      through `@Environment(\.expenseRepository)` (Decimal, two-level
+      category/subcategory, account) and surfacing failures via the presenter.
+      Stays open for repeated entries via `ExpenseTransactionFormModel.reset()`.
+      Dropped the flat-category `CategoryRuleService` auto-suggest on this
+      surface (no domain learning store yet — revisit when categorization is
+      ported).
+    - [ ] **Manual `TransactionFormView`** — the rich form (recurring schedule +
+      generated occurrences, receipt OCR, category learning). Needs domain
+      occurrence-generation + receipt handling in the form model.
+    - [ ] **Import Statement / Scan Receipts** — batch writers.
   - **Then** delete the legacy Transactions screen + "(beta)" label and retire
     the `Double` `@Model` types + `DataService`.
   - **Analytics grouping** by the two-level catalog (deferred).
